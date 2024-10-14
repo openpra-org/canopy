@@ -3,6 +3,7 @@
  * parallelism for CPUs and GPUs.
  *
  * Copyright The AdaptiveCpp Contributors
+ * Copyright 2024 The OpenPRA Initiative
  *
  * AdaptiveCpp is released under the BSD 2-Clause "Simplified" License.
  * See file LICENSE in the project root for full license details.
