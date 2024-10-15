@@ -30,21 +30,27 @@ ENV BUILD_PACKAGES="ca-certificates \
     unzip \
     wget"
 
-ENV SRC_BUILD_PACKAGES="cmake \
+ENV SRC_BUILD_PACKAGES="automake \
+    cmake \
+    doxygen \
+    doxygen-doc \
+    graphviz \
     libboost-all-dev \
     libcln-dev \
+    libcurl4-openssl-dev \
+    libedit-dev \
+    libeigen3-dev \
     libgmp-dev \
     libginac-dev \
-    automake \
     libglpk-dev \
     libhwloc-dev \
     libnuma-dev \
-    libz3-dev \
     libxerces-c-dev \
-    libeigen3-dev \
-    doxygen \
-    doxygen-doc \
-    graphviz"
+    libz3-dev \
+    libzstd-dev \
+    spirv-cross \
+    spirv-headers \
+    spirv-tools"
 
 ENV DEBUGGER_PACKAGES="gdb \
     valgrind \
@@ -54,14 +60,15 @@ ENV DEBUGGER_PACKAGES="gdb \
     ccache \
     python3"
 
+ENV UTIL_PACKAGES="nvtop intel-gpu-tools"
+
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-fast update && \
-    apt-fast install -y --no-install-recommends $BUILD_PACKAGES $SRC_BUILD_PACKAGES $DEBUGGER_PACKAGES && \
+    apt-fast install -y --no-install-recommends $BUILD_PACKAGES $SRC_BUILD_PACKAGES $DEBUGGER_PACKAGES $UTIL_PACKAGES && \
     update-ca-certificates
-
 
 ## Install llvm/clang
 ENV CLANG_VERSION="18"
@@ -96,7 +103,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
 ## Install Intel Compute Runtime
 ARG INTEL_LZ_DEBS=intel-lz-deb.list
 WORKDIR /intel-lz
-COPY ./$INTEL_LZ_DEBS .
+COPY ./apt-sources/$INTEL_LZ_DEBS .
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
@@ -106,48 +113,40 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
 
 WORKDIR /
 ## Compile & Install Intel OneAPI Level Zero for Intel GPU support
-ENV INTEL_LZ_DEPS="dpkg-shlibdeps"
-ENV ADAPTIVE_CPP_INSTALL_DIR="/usr/local"
-ENV CMAKE_C_COMPILER="/usr/bin/clang-$CLANG_VERSION"
-ENV CMAKE_CXX_COMPILER="/usr/bin/clang++-$CLANG_VERSION"
-ENV CLANG_EXECUTABLE_PATH="/usr/bin/clang++-$CLANG_VERSION"
-ENV LLVM_DIR="/usr/lib/llvm-$CLANG_VERSION/cmake"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     git clone https://github.com/oneapi-src/level-zero.git && \
     cd level-zero && mkdir build && cd build && \
-    #cmake -DCMAKE_INSTALL_PREFIX=$ADAPTIVE_CPP_INSTALL_DIR \
-    #cmake -DCMAKE_C_COMPILER=$CMAKE_C_COMPILER \
-    #      -DCMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER \
     cmake -DCMAKE_BUILD_TYPE=Release .. && \
     cmake --build . -j --target package && \
     cmake --build . -j --target install
-    #echo "skipping intel-lz"
 
 ## Install Nvidia GPUs as OpenCL target as well
+WORKDIR /
 ENV NVIDIA_OPENCL_PACKAGES="ocl-icd-libopencl1 opencl-headers clinfo"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-fast update && \
     apt-fast install -y --no-install-recommends $NVIDIA_OPENCL_PACKAGES && \
     mkdir -p /etc/OpenCL/vendors && \
     echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
 
 ## Install AMD GPU Driver, OpenCL & ROCm backends
-ARG URL_AMD_DRIVER="https://repo.radeon.com/amdgpu-install/6.2.3/ubuntu/jammy/amdgpu-install_6.2.60203-1_all.deb"
-RUN curl $URL_AMD_DRIVER -o amdgpu.deb && \
-    dpkg -i amdgpu.deb && \
-    amdgpu-install --usecase=opencl,graphics --opencl=rocr --vulkan=pro,amdvlk --no-dkms --accept-eula -y && \
-    mkdir -p /etc/OpenCL/vendors && \
-    echo "libamdocl64.so" > /etc/OpenCL/vendors/amdocl64.icd && \
-    ln -s /usr/lib/x86_64-linux-gnu/libOpenCL.so.1 /usr/lib/libOpenCL.so
 
+ARG URL_AMD_DRIVER="https://repo.radeon.com/amdgpu-install/6.2.3/ubuntu/jammy/amdgpu-install_6.2.60203-1_all.deb"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
+    curl $URL_AMD_DRIVER -o amdgpu.deb && \
+    dpkg -i amdgpu.deb && \
+    amdgpu-install --usecase=opencl,graphics --opencl=rocr --vulkan=pro,amdvlk --no-dkms --accept-eula -y && \
+    mkdir -p /etc/OpenCL/vendors && \
+    echo "libamdocl64.so" > /etc/OpenCL/vendors/amdocl64.icd && \
+    ln -s /usr/lib/x86_64-linux-gnu/libOpenCL.so.1 /usr/lib/libOpenCL.so && \
     apt-fast update && \
     apt-fast install -y --no-install-recommends rocm-dev
 
@@ -160,6 +159,7 @@ ENV LLVM_DIR="/usr/lib/llvm-$CLANG_VERSION/cmake"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
     git clone https://github.com/AdaptiveCpp/AdaptiveCpp && \
     cd AdaptiveCpp && mkdir build && cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=$ADAPTIVE_CPP_INSTALL_DIR \
@@ -174,18 +174,26 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     make -j && \
     make install
 
+## setup a build/dev environment
+FROM baseimage AS devimage
 ARG USER=coder
 ARG UID=1000
 ARG GID=1000
-RUN if getent group ${GID}; then groupdel $(getent group ${GID} | cut -d: -f1); fi && \
-    # add a group with a user's name
+RUN if getent passwd ${UID}; then userdel -f $(getent passwd ${UID} | cut -d: -f1); fi && \
+    if getent group ${GID}; then groupdel $(getent group ${GID} | cut -d: -f1); fi && \
     groupadd -g ${GID} ${USER} && \
     useradd --uid ${UID} --gid ${GID} --groups sudo --create-home --shell /bin/bash ${USER} && \
     echo "${USER} ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/${USER} && \
     chmod 0440 /etc/sudoers.d/${USER} && \
-    mkdir -p /home/${USER}/projects /dev/dri && \
-    chown -R ${USER}:${USER} /home/${USER} /dev/dri
+    mkdir -p /home/${USER}/projects && \
+    chown -R ${USER}:${USER} /home/${USER}
 
 USER ${USER}
 WORKDIR /home/${USER}/projects/canopy
 
+#FROM devimage AS buildimage
+#COPY . .
+
+#WORKDIR /home/${USER}/projects/canopy/build
+#RUN cmake .. && \
+#    make -j 

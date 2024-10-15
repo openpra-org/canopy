@@ -1,5 +1,8 @@
 cmake_minimum_required (VERSION 3.22)
 
+set(CMAKE_C_COMPILER clang-18)
+set(CMAKE_CXX_COMPILER clang++-18)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
@@ -11,9 +14,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/_cmake")
 message(DEBUG "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
 # Print compiler information
-message(DEBUG "C compiler: ${CMAKE_C_COMPILER}")
-message(DEBUG "C++ compiler: ${CMAKE_CXX_COMPILER}")
-message(DEBUG "C++ compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "C compiler: ${CMAKE_C_COMPILER}")
+message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")
+message(STATUS "C++ compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
 
 # CMake 3.27 - Address CMP0144 policy warning
 # @link https://cmake.org/cmake/help/latest/policy/CMP0167.html#policy:CMP0144
@@ -36,7 +39,6 @@ endif()
 
 find_package(_openmp)
 
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/../cmake)
 
 find_package(AdaptiveCpp CONFIG REQUIRED)
@@ -57,14 +59,41 @@ if(NOT ACPP_DEBUG_LEVEL)
     endif()
 endif()
 
-#add_compile_definitions(HIPSYCL_DEBUG_LEVEL="${HIPSYCL_DEBUG_LEVEL}")
+add_definitions(-DHIPSYCL_DEBUG_LEVEL=${ACPP_DEBUG_LEVEL})
+
+set(ACPP_VISIBILITY_MASK "ocl")
+
 #Use add_definitions for now for older cmake versions
 cmake_policy(SET CMP0005 NEW)
-add_definitions(-DHIPSYCL_DEBUG_LEVEL=${ACPP_DEBUG_LEVEL})
 
 if(WIN32)
     add_definitions(-D_USE_MATH_DEFINES)
 endif()
+
+# Using accelerated C++ standard parallelism
+#
+# @link https://github.com/AdaptiveCpp/AdaptiveCpp/blob/develop/doc/stdpar.md
+#
+# Offloading of C++ standard parallelism is enabled using `--acpp-stdpar`. This flag does not by itself imply a target
+# or compilation flow, which will have to be provided in addition using the normal --acpp-targets argument. C++ standard
+# parallelism is expected to work with any of our clang compiler-based compilation flows, such as omp.accelerated, cuda,
+# hip or the generic SSCP compiler (--acpp-targets=generic). It is not currently supported in library-only compilation
+# flows. The focus of testing currently is the generic SSCP compiler. AdaptiveCpp by default uses some experimental
+# heuristics to determine if a problem is worth offloading. These heuristics are currently very simplistic and might not
+# work well for you. They can be disabled using --acpp-stdpar-unconditional-offload.
+#
+# Enable full feature profile for AdaptiveCpp
+set(ACPP_COMPILER_FEATURE_PROFILE "full" CACHE STRING "AdaptiveCpp feature profile")
+set(ACPP_STDPAR "on" CACHE STRING "enables SYCL offloading of C++ standard parallel algorithms")
+
+add_definitions(-DACPP_COMPILER_FEATURE_PROFILE=full)
+add_definitions(-DACPP_STDPAR=on)
+#
+# Enable offloading of C++ standard parallelism
+#add_compile_options(--acpp-stdpar)
+#
+# Optionally, if you want to enable unconditional offloading
+#add_compile_options(--acpp-stdpar-unconditional-offload)
 
 include_directories(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR})
 

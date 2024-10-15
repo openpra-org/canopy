@@ -1,10 +1,27 @@
 #include <cassert>
+#include <execution>
 #include <iostream>
 #include <vector>
 
 #include <CL/sycl.hpp>
 
 using data_type = float;
+
+/**
+ * @brief Fills a vector with random values.
+ *
+ * This function fills the provided vector `v` with random floating-point values
+ * in the range [0.0, 1.0).
+ *
+ * @param v The vector to be filled with random values.
+ */
+void fill_rand(std::vector<data_type> &v) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<data_type> dis(0.0, 1.0);
+
+    std::generate(std::execution::par_unseq, v.begin(), v.end(), [&]() { return dis(gen); });
+}
 
 /**
  * @brief Adds two vectors element-wise using SYCL for parallel computation.
@@ -42,22 +59,57 @@ std::vector<data_type> add(cl::sycl::queue &q, const std::vector<data_type> &a, 
 }
 
 /**
- * @brief The main function that demonstrates the use of the `add` function.
+ * @brief Adds two vectors element-wise using standard C++ parallel algorithms.
  *
- * It initializes two vectors, calls the `add` function to compute their sum,
- * and prints the result to the standard output.
+ * This function takes two input vectors `a` and `b`, and returns a new vector `c`
+ * where each element is the sum of the corresponding elements in `a` and `b`.
+ * The computation is performed using `std::transform` with a parallel execution policy.
+ *
+ * @param a The first input vector.
+ * @param b The second input vector.
+ * @return A vector containing the element-wise sum of `a` and `b`.
+ *
+ * @note The input vectors `a` and `b` must have the same size.
+ */
+std::vector<data_type> add_std(const std::vector<data_type> &a, const std::vector<data_type> &b) {
+    std::vector<data_type> c(a.size());
+
+    assert(a.size() == b.size());
+
+    std::transform(std::execution::par_unseq, a.begin(), a.end(), b.begin(), c.begin(),
+                   [](data_type x, data_type y) { return x + y; });
+
+    return c;
+}
+
+/**
+ * @brief The main function that demonstrates the use of the `add` and `add_std` functions.
+ *
+ * It initializes two vectors with random values, calls both `add` and `add_std` functions
+ * to compute their sum, and asserts that the results are identical.
  *
  * @return int Returns 0 upon successful execution.
  */
 int main() {
-    cl::sycl::queue q;
-    std::vector<data_type> a = {1.f, 2.f, 3.f, 4.f, 5.f};
-    std::vector<data_type> b = {-1.f, 2.f, -3.f, 4.f, -5.f};
-    auto result = add(q, a, b);
+    const size_t vector_size = 80*1024*1024;
+    std::vector<data_type> a(vector_size);
+    std::vector<data_type> b(vector_size);
 
-    std::cout << "Result: " << std::endl;
-    for (const auto x : result)
-        std::cout << x << std::endl;
+    // Fill vectors with random values
+    fill_rand(a);
+    fill_rand(b);
+
+    cl::sycl::queue q;
+    auto result_sycl = add(q, a, b);
+    auto result_std = add_std(a, b);
+
+    // Assert that both results are identical
+    assert(result_sycl.size() == result_std.size());
+    for (size_t i = 0; i < result_sycl.size(); ++i) {
+        assert(result_sycl[i] == result_std[i]);
+    }
+
+    std::cout << "Both add and add_std functions produced identical results." << std::endl;
 
     return 0;
 }
