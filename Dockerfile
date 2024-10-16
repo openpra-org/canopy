@@ -32,22 +32,6 @@ ENV BUILD_PACKAGES="ca-certificates \
     unzip \
     wget"
 
-ENV BUILD_PACKAGES2="ca-certificates \
-    curl \
-    file \
-    git \
-    golang \
-    gnupg \
-    jq \
-    lsb-release \
-    nano \
-    python3 \
-    rsync \
-    ssh \
-    sudo \
-    unzip \
-    wget"
-
 ENV SRC_BUILD_PACKAGES="automake \
     cmake \
     doxygen \
@@ -61,6 +45,7 @@ ENV SRC_BUILD_PACKAGES="automake \
     libgmp-dev \
     libginac-dev \
     libglpk-dev \
+    libgtest-dev \
     libhwloc-dev \
     libnuma-dev \
     libxerces-c-dev \

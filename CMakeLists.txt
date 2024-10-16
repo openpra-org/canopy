@@ -18,6 +18,10 @@ message(STATUS "C compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")
 message(STATUS "C++ compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
 
+######################### Options ################################################## {{{
+option(BUILD_TESTS "Build tests" ON)  # Influences CTest.
+option(BUILD_EXAMPLES "Build examples" ON)
+
 # CMake 3.27 - Address CMP0144 policy warning
 # @link https://cmake.org/cmake/help/latest/policy/CMP0167.html#policy:CMP0144
 #
@@ -88,13 +92,19 @@ set(ACPP_STDPAR "on" CACHE STRING "enables SYCL offloading of C++ standard paral
 
 add_definitions(-DACPP_COMPILER_FEATURE_PROFILE=full)
 add_definitions(-DACPP_STDPAR=on)
-#
-# Enable offloading of C++ standard parallelism
-#add_compile_options(--acpp-stdpar)
-#
-# Optionally, if you want to enable unconditional offloading
-#add_compile_options(--acpp-stdpar-unconditional-offload)
 
 include_directories(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR})
+include_directories("${PROJECT_BINARY_DIR}/include")
 
-add_subdirectory(examples)
+add_subdirectory(src)
+
+if (BUILD_TESTS)
+    include(CTest)
+    enable_testing()
+    find_package(_googletest)
+    add_subdirectory(tests)
+endif ()
+
+if (BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif ()
