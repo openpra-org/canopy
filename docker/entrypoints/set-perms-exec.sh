@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Check if /dev/dri/ exists and is not empty
 if [ -d /dev/dri ] && [ "$(ls -A /dev/dri)" ]; then
@@ -8,3 +8,11 @@ if [ -d /dev/dri ] && [ "$(ls -A /dev/dri)" ]; then
         echo "Updated permissions for device $device"
     done
 fi
+
+# Check if any arguments are provided
+if [ $# -eq 0 ]; then
+    set -- acpp-info
+fi
+
+# Execute the command
+exec "$@"
