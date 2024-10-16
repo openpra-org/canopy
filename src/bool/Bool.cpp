@@ -7,6 +7,7 @@
 using sampling_distribution_type = double_t;
 using bit_vector_type = uint8_t; //std::bitset<8>;
 
+// TODO:: encode repeating symbols
 // for expression F = ab'c + a'b + bc' + a'bc' + aa'baacc'ab, with:
 //
 // s = 3 unique symbols (excluding negations)
