@@ -5,111 +5,102 @@
 
 #include <CL/sycl.hpp>
 
-using data_type = float;
+// TODO:: define a templated type, with concrete overrides for uint8_t, uint16_t, uint32_t, uint64_t, etc...
+using sampling_distribution_float_type = double_t;
 
-/**
- * @brief Fills a vector with random values.
- *
- * This function fills the provided vector `v` with random floating-point values
- * in the range [0.0, 1.0).
- *
- * @param v The vector to be filled with random values.
- */
-void fill_rand(std::vector<data_type> &v) {
+// for expression F = ab'c + a'b + bc' + a'bc', with:
+//
+// s = 3 unique symbols (excluding negations)
+// n = 2*s = 6 total symbols (including negations)
+// m = 4 products
+//
+// using w=8-bit words to encode n=6 symbols, starting from the MSB, and,
+// m = 4 words, we fill out a m=4 element vector,
+// where each element encodes one product
+// -------------------------------------------------
+// |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
+// -------------------------------------------------
+// |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
+// -------------------------------------------------
+static inline void set_F(std::vector<uint8_t> &F) {
+    // first element: encodes ab'c
+    // -------------------------------------------------
+    // |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
+    // -------------------------------------------------
+    // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
+    // -------------------------------------------------
+    // |  1  |  0  |  0  |  1  |  1  |  0  |  0  |  0  |
+    // -------------------------------------------------
+    F[0] = 0b10011000;
+
+    // second element: encodes a'b
+    // -------------------------------------------------
+    // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
+    // -------------------------------------------------
+    // |  0  |  1  |  1  |  0  |  0  |  0  |  0  |  0  |
+    // -------------------------------------------------
+    F[1] = 0b01100000;
+
+    // third element: encodes bc'
+    // -------------------------------------------------
+    // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
+    // -------------------------------------------------
+    // |  0  |  0  |  1  |  0  |  0  |  1  |  0  |  0  |
+    // -------------------------------------------------
+    F[2] = 0b00100100;
+
+    // fourth element: encodes a'bc'
+    // -------------------------------------------------
+    // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
+    // -------------------------------------------------
+    // |  0  |  1  |  1  |  0  |  0  |  1  |  0  |  0  |
+    // -------------------------------------------------
+    F[3] = 0b01100100;
+}
+
+bool eval(auto &F, auto &x) {
+
+}
+
+static void fill_x(std::vector<double_t> &dist_x) {
+    dist_x[0] = 0.28023;  // P(a)
+    dist_x[1] = 0.00291; // P(b)
+    dist_x[2] = 0.12000;   // P(c)
+}
+
+static void sample(std::vector<uint8_t> &samples_x, const std::vector<double_t> &dist_x) {
+
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<data_type> dis(0.0, 1.0);
+    std::uniform_real_distribution<sampling_distribution_float_type> uniform_dist(0.0, 1.0);
 
-    std::generate(std::execution::par_unseq, v.begin(), v.end(), [&]() { return dis(gen); });
-}
-
-/**
- * @brief Adds two vectors element-wise using SYCL for parallel computation.
- *
- * This function takes two input vectors `a` and `b`, and returns a new vector `c`
- * where each element is the sum of the corresponding elements in `a` and `b`.
- *
- * @param q The SYCL queue used to submit the parallel computation.
- * @param a The first input vector.
- * @param b The second input vector.
- * @return A vector containing the element-wise sum of `a` and `b`.
- *
- * @note The input vectors `a` and `b` must have the same size.
- */
-std::vector<data_type> add(cl::sycl::queue &q, const std::vector<data_type> &a, const std::vector<data_type> &b) {
-    std::vector<data_type> c(a.size());
-
-    assert(a.size() == b.size());
-    cl::sycl::range<1> work_items{a.size()};
-    {
-        cl::sycl::buffer<data_type> buff_a(a.data(), a.size());
-        cl::sycl::buffer<data_type> buff_b(b.data(), b.size());
-        cl::sycl::buffer<data_type> buff_c(c.data(), c.size());
-
-        q.submit([&](cl::sycl::handler &cgh) {
-            auto access_a = buff_a.get_access<cl::sycl::access::mode::read>(cgh);
-            auto access_b = buff_b.get_access<cl::sycl::access::mode::read>(cgh);
-            auto access_c = buff_c.get_access<cl::sycl::access::mode::write>(cgh);
-
-            cgh.parallel_for<class vector_add>(
-                    work_items, [=](cl::sycl::id<1> tid) { access_c[tid] = access_a[tid] + access_b[tid]; });
-        });
+    for (size_t i = 0; i < samples_x.size(); i++) {
+        samples_x[i] = (uniform_dist(gen) > dist_x[0] ? 0b01000000 : 0b10000000) |
+                       (uniform_dist(gen) > dist_x[1] ? 0b00010000 : 0b00100000) |
+                       (uniform_dist(gen) > dist_x[2] ? 0b00000100 : 0b00001000);
     }
-    return c;
 }
 
-/**
- * @brief Adds two vectors element-wise using standard C++ parallel algorithms.
- *
- * This function takes two input vectors `a` and `b`, and returns a new vector `c`
- * where each element is the sum of the corresponding elements in `a` and `b`.
- * The computation is performed using `std::transform` with a parallel execution policy.
- *
- * @param a The first input vector.
- * @param b The second input vector.
- * @return A vector containing the element-wise sum of `a` and `b`.
- *
- * @note The input vectors `a` and `b` must have the same size.
- */
-std::vector<data_type> add_std(const std::vector<data_type> &a, const std::vector<data_type> &b) {
-    std::vector<data_type> c(a.size());
-
-    assert(a.size() == b.size());
-
-    std::transform(std::execution::par_unseq, a.begin(), a.end(), b.begin(), c.begin(),
-                   [](data_type x, data_type y) { return x + y; });
-
-    return c;
-}
-
-/**
- * @brief The main function that demonstrates the use of the `add` and `add_std` functions.
- *
- * It initializes two vectors with random values, calls both `add` and `add_std` functions
- * to compute their sum, and asserts that the results are identical.
- *
- * @return int Returns 0 upon successful execution.
- */
 int main() {
-    const size_t vector_size = 80*1024*1024;
-    std::vector<data_type> a(vector_size);
-    std::vector<data_type> b(vector_size);
+    // for expression F = ab'c + a'b + bc' + a'bc', with
+    // m = 4 products
+    const size_t m_products = 4;
+    std::vector<uint8_t> F(m_products);
 
-    // Fill vectors with random values
-    fill_rand(a);
-    fill_rand(b);
+    // set the function
+    set_F(F);
 
-    cl::sycl::queue q;
-    auto result_sycl = add(q, a, b);
-    auto result_std = add_std(a, b);
+    // define the probabilities for X
+    const size_t s_symbols = 3;
+    auto dist_x = std::vector<double_t>(s_symbols);
+    fill_x(dist_x);
 
-    // Assert that both results are identical
-    assert(result_sycl.size() == result_std.size());
-    for (size_t i = 0; i < result_sycl.size(); ++i) {
-        assert(result_sycl[i] == result_std[i]);
-    }
+    // sample from dist_x
+    const size_t num_samples = 100;
+    const size_t num_batches = 1;
+    auto batches = std::vector<uint8_t>(num_samples);
+    sample(batches, dist_x);
 
-    std::cout << "Both add and add_std functions produced identical results." << std::endl;
 
     return 0;
 }
