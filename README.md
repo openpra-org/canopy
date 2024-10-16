@@ -4,21 +4,25 @@ platform-independent sparse matrix library for quantifying large PRA models
 
 ## Development
 
-### Docker
-Use/follow the [Dockerfile](docker/generic.Dockerfile) to set up your build environment.
+### Develop Using Docker/Linux
+This is the preferred method. You can directly use the [Dockerfile](Dockerfile) to set up your build environment.
+If you're building directly in Linux, please follow the steps in the Dockerfile for your build environment. Development
+in other environments should be possible but has not been documented yet. Please open a pull request if you'd like to contribute to this effort.
+
 #### docker build
 ```bash
-docker build \
-    -t canopy-dev:latest \
-    -f docker/generic.Dockerfile .
+docker build -t canopy:ssh-debugger --target=ssh-debugger .
 ```
-### docker run
+
+#### docker run
 ```bash
 docker run --rm -it \
-    --device=/dev/kfd \
+    -p 2222:22 \ # port forward to localhost:2222 for an ssh dev session
+    #--device=/dev/kfd \
     --device=/dev/dri:/dev/dri \
     --cap-add=ALL \ # unsafe, only needed for optional intel_gpu_top
     --group-add video \
+    canopy:ssh-debugger
     /bin/bash
 ```
 

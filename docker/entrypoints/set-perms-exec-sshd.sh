@@ -11,10 +11,8 @@ if [ -d /dev/dri ] && [ "$(ls -A /dev/dri)" ]; then
     clinfo -l
 fi
 
-# Check if any arguments are provided
-if [ $# -eq 0 ]; then
-    set -- acpp-info
-fi
-
 # Execute the command
 exec "$@"
+
+echo "Starting SSH server as daemon..."
+/usr/sbin/sshd -D

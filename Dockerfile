@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.10.0
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 as base
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS base
 
 ENV CODENAME="jammy"
 ENV DEBIAN_FRONTEND=noninteractive
@@ -244,21 +244,21 @@ RUN sudo chmod +x -R /entrypoints
 ENTRYPOINT ["/entrypoints/set-perms-exec.sh"]
 
 ## setup a SSH development environment
-FROM devimage as ssh-debugger
+FROM devimage AS ssh-debugger
+ARG SSH_PORT=2222
 ENV SSH_DEBUGGER_PACKAGES="openssh-server rsync"
+USER "root"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
-    sudo apt update && \
-    sudo apt-fast install -y --no-install-recommends $SSH_DEBUGGER_PACKAGES && \
-    echo "${USER}:${USER}" | sudo chpasswd && \
-    sudo service ssh start
+    apt-fast install -y --no-install-recommends $SSH_DEBUGGER_PACKAGES && \
+    echo "${USER}:${USER}" | chpasswd && \
+    echo "Port ${SSH_PORT}" >> /etc/ssh/sshd_config && \
+    service ssh start
 
 # Expose port 2222 for SSH access
-EXPOSE 2222
+EXPOSE $SSH_PORT
 
-# Reset user to root
-#USER root
-# Start the SSH daemon
-#CMD ["/usr/sbin/sshd", "-D"]
+# Set the entrypoint to start sshd and run any other passed arguments
+ENTRYPOINT ["/entrypoints/set-perms-exec-sshd.sh"]
