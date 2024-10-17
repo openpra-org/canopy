@@ -5,10 +5,17 @@
 
 // TODO:: define a templated type, with concrete overrides for uint8_t, uint16_t, uint32_t, uint64_t, etc...
 using sampling_distribution_type = double_t;
+
 using bit_vector_type = uint8_t; //std::bitset<8>;
 
 // TODO:: encode repeating symbols
-// for expression F = ab'c + a'b + bc' + a'bc' + aa'baacc'ab, with:
+template<typename T>
+using products = std::vector<T>;
+
+template<typename T>
+using term = std::vector<T>;
+
+// for expression F = ab'c + a'b + bc' + a'bc' + aa'baacc'ab + ab, with:
 //
 // s = 3 unique symbols (excluding negations)
 // n = 2*s = 6 total symbols (including negations)
@@ -22,7 +29,7 @@ using bit_vector_type = uint8_t; //std::bitset<8>;
 // -------------------------------------------------
 // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
 // -------------------------------------------------
-static inline void set_F(std::vector<bit_vector_type> &F) {
+static inline void set_F(products<uint8_t> &F) {
     // first element: encodes ab'c
     // -------------------------------------------------
     // |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
@@ -56,9 +63,40 @@ static inline void set_F(std::vector<bit_vector_type> &F) {
     // |  0  |  1  |  1  |  0  |  0  |  1  |  0  |  0  |
     // -------------------------------------------------
     F[3] = 0b01100100;
+
+    // fifth element: encodes aa'aacc'
+    // repeated terms have no effect
+    /** TODO:: [optimization]
+     * consider an encoding scheme such that when mutually exclusive events (such as a, a') are both set to 1, this
+     * product is masked out of the computation. You can develop this logic by considering how non-existing mutually
+     * exclusive events such as (b, b') are being treated in this case. They are both being set to 0, and will be
+     * evaluated as such later in the eval step. They would have been removed had this term been encoded like a sparse
+     * matrix (removing 0s). So a simple step would be to set the whole term to 0b00000000 when (x, x') is encountered,
+     * leaving the empty set to be removed by the sparse-matrix encoding step that should eventually follow.
+     *
+     * another expensive step is to minimize this term (using boolean reduction) before encoding the term, which is the
+     * more general method for the step explained above.
+     *
+     * another alternative is to bitwise XOR the term with the bitshift of itself (by 1).
+     *
+     * **/
+    // -------------------------------------------------
+    // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
+    // -------------------------------------------------
+    // |  1  |  1  |  0  |  0  |  1  |  1  |  0  |  0  |
+    // -------------------------------------------------
+    F[4] = 0b11101100;
 }
 
 bool eval(auto &F, auto &x) {
+
+}
+
+bool eval_and(const auto &F_and, const auto &x) {
+
+}
+
+bool eval_or(const auto &F_or, const auto &and_matrix) {
 
 }
 
@@ -83,9 +121,9 @@ static void sample(std::vector<bit_vector_type> &samples_x, const std::vector<sa
 }
 
 int main() {
-    // for expression F = ab'c + a'b + bc' + a'bc', with
-    // m = 4 products
-    const size_t m_products = 4;
+    // for expression F = ab'c + a'b + bc' + a'bc' + aa'aacc'a, with
+    // m = 5 products
+    const size_t m_products = 5;
     std::vector<bit_vector_type> F(m_products);
 
     // set the function
