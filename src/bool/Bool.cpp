@@ -15,14 +15,14 @@ using products = std::vector<T>;
 template<typename T>
 using term = std::vector<T>;
 
-// for expression F = ab'c + a'b + bc' + a'bc' + aa'baacc'ab + ab, with:
+// for expression F = ab'c + a'b + bc' + a'bc' + aa'baacc'ab, with:
 //
 // s = 3 unique symbols (excluding negations)
 // n = 2*s = 6 total symbols (including negations)
-// m = 4 products
+// m = 5 products
 //
 // using w=8-bit words to encode n=6 symbols, starting from the MSB, and,
-// m = 4 words, we fill out a m=4 element vector,
+// m = 5 words, we fill out a m=5 element vector,
 // where each element encodes one product
 // -------------------------------------------------
 // |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |

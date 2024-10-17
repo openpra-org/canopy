@@ -1,66 +1,101 @@
-//
-// Created by Arjun Earthperson on 10/17/24.
-//
-
 #ifndef CANOPY_PLA_H
 #define CANOPY_PLA_H
 
 #include <cstddef>
 #include <vector>
+#include <CL/sycl.hpp>
+#include "LogicBlock.h"
 
 namespace Canopy::Bool {
 
-    template<typename ChunkType>
-    class [[maybe_unused]] PLA {
+/**
+ * @brief Programmable Logic Array (PLA) implementation optimized for SYCL.
+ *
+ * @tparam Wires The data type representing the wires (input/output).
+ */
+    template<typename Wires>
+    class PLA : public LogicBlock<Wires, PLA<Wires>> {
     public:
-        using AndTerm = typename AndPlane<ChunkType>::Term;
-        using AndProducts = typename AndPlane<ChunkType>::Products;
-        using OrTerm = typename OrPlane<ChunkType>::Term;
-        using OrOutputs = typename OrPlane<ChunkType>::Outputs;
+        /**
+         * @brief Type alias for a term in the AND plane.
+         */
+        using AndTerm = Wires;
 
-        PLA() = default;
+        /**
+         * @brief Type alias for the collection of AND plane products.
+         */
+        using AndProducts = std::vector<AndTerm>;
 
-        // Initialize the PLA with the number of inputs, product terms, and outputs
-        void initialize(size_t num_inputs, size_t num_terms, size_t num_outputs) {
-            num_symbols_ = num_inputs;
-            and_plane_.initialize(num_terms, num_symbols_);
-            or_plane_.initialize(num_outputs, num_terms);
+        /**
+         * @brief Type alias for a term in the OR plane.
+         */
+        using OrTerm = Wires;
+
+        /**
+         * @brief Type alias for the collection of OR plane outputs.
+         */
+        using OrOutputs = std::vector<OrTerm>;
+
+        /**
+         * @brief Constructs a PLA with specified input and output widths.
+         *
+         * @param inputWidth The number of input wires.
+         * @param outputWidth The number of output wires.
+         */
+        PLA(const size_t inputWidth, const size_t outputWidth)
+                : LogicBlock<Wires, PLA<Wires>>(inputWidth, outputWidth),
+                  and_plane_(inputWidth, /* output width for AND plane */),
+                  or_plane_(/* parameters for OR plane */) {
+            // Initialize AND and OR planes as needed
         }
 
-        // Set a product term in the AND plane
-        void set_and_product(size_t term_index, const AndTerm& term) {
-            and_plane_.set_product(term_index, term);
-        }
+        /**
+         * @brief SYCL-compliant compute implementation for the PLA.
+         *
+         * @param q The SYCL queue to enqueue the kernel.
+         * @param input A SYCL buffer containing the input wires.
+         * @param output A SYCL buffer to store the output wires.
+         */
+        void compute_impl(sycl::queue& q, const Wires& input, Wires& output) const {
+            // Example SYCL kernel performing AND and OR operations
+            q.submit([&](sycl::handler& cgh) {
+                auto in = input.get_access<sycl::access::mode::read>(cgh);
+                auto out = output.get_access<sycl::access::mode::write>(cgh);
 
-        // Set an output term in the OR plane
-        void set_or_output(size_t output_index, const OrTerm& term) {
-            or_plane_.set_output(output_index, term);
-        }
+                cgh.parallel_for<class PLAKernel>(sycl::range<1>(this->output_width_), [=](sycl::id<1> idx) {
+                    // Perform AND operations (example)
+                    Wires and_result = 0;
+                    for (size_t i = 0; i < this->input_width_; ++i) {
+                        and_result |= (in[i] & /* some mask or term */);
+                    }
 
-        // Optimize the PLA by optimizing both planes
-        void optimize() {
-            and_plane_.optimize();
-            // Additional optimizations for OR plane can be added here
-        }
+                    // Perform OR operations
+                    Wires or_result = 0;
+                    or_result |= and_result; // Simplified for example
 
-        // Evaluate the PLA given the input vector
-        std::vector<bool> evaluate(const std::vector<ChunkType>& inputs) const {
-            // Evaluate AND plane
-            std::vector<bool> and_results = and_plane_.evaluate(inputs);
-
-            // Evaluate OR plane
-            std::vector<bool> or_results = or_plane_.evaluate(and_results);
-
-            return or_results;
+                    out[idx] = or_result;
+                });
+            }).wait(); // Wait for kernel completion (synchronize if necessary)
         }
 
     private:
-        size_t num_symbols_ = 0;
-        AndPlane<ChunkType> and_plane_{};
-        OrPlane<ChunkType> or_plane_{};
+        /**
+         * @brief The AND plane of the PLA.
+         *
+         * This member handles the product terms within the PLA and is responsible for AND operations.
+         */
+        // Example placeholder for AND plane logic block
+        LogicBlock<Wires, /* Derived class for AND plane */> and_plane_;
+
+        /**
+         * @brief The OR plane of the PLA.
+         *
+         * This member handles the output terms within the PLA and is responsible for OR operations.
+         */
+        // Example placeholder for OR plane logic block
+        LogicBlock<Wires, /* Derived class for OR plane */> or_plane_;
     };
 
-}
+} // namespace Canopy::Bool
 
-
-#endif //CANOPY_PLA_H
+#endif // CANOPY_PLA_H
