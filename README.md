@@ -15,15 +15,14 @@ docker build -t canopy:ssh-debugger --target=ssh-debugger .
 ```
 
 #### docker run
+In daemon mode:
 ```bash
-docker run --rm -it \
-    -p 2222:22 \ # port forward to localhost:2222 for an ssh dev session
-    #--device=/dev/kfd \
-    --device=/dev/dri:/dev/dri \
-    --cap-add=ALL \ # unsafe, only needed for optional intel_gpu_top
-    --group-add video \
-    canopy:ssh-debugger
-    /bin/bash
+docker run -d \
+  --name=canopy-dev \
+  -p 2222:2222 \
+  --device=/dev/dri \
+  --cap-add=ALL \
+  canopy:ssh-debugger
 ```
 
 ### Tested Versions

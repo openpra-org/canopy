@@ -12,8 +12,6 @@ target_compile_definitions(bool PRIVATE -DHIPSYCL_STDPAR_MEMORY_MANAGEMENT_DEFAU
 
 add_sycl_to_target(TARGET bool sampler SOURCES Bool.cpp)
 
-find_package(_boost)
-
 install(TARGETS bool
         RUNTIME DESTINATION share/canopy/lib/bool)
 
