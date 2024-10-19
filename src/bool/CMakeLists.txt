@@ -6,7 +6,11 @@ add_executable(bool Bool.cpp
         AndPlane.h
         OrPlane.h
         pla/OpPlane.h)
-add_sycl_to_target(TARGET bool SOURCES Bool.cpp)
+
+target_compile_options(bool PRIVATE --acpp-stdpar --acpp-stdpar-unconditional-offload)
+target_compile_definitions(bool PRIVATE -DHIPSYCL_STDPAR_MEMORY_MANAGEMENT_DEFAULT_DISABLED)
+
+add_sycl_to_target(TARGET bool sampler SOURCES Bool.cpp)
 
 find_package(_boost)
 

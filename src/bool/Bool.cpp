@@ -1,8 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
+#include <algorithm>
+#include <execution>
 
 #include <CL/sycl.hpp>
+#include <iomanip>
 
 // TODO:: define a templated type, with concrete overrides for uint8_t, uint16_t, uint32_t, uint64_t, etc...
 using sampling_distribution_type = double_t;
@@ -126,9 +129,48 @@ bool eval_or(const auto &F_or, const auto &and_matrix) {
 
 // a | b =
 static void fill_x(std::vector<sampling_distribution_type> &dist_x) {
-    dist_x[0] = 0.0;  // P(a)
-    dist_x[1] = 1.0;  // P(b)
-    dist_x[2] = 0.0;  // P(c)
+    dist_x[0] = 0.99;  // P(a)
+    dist_x[1] = 0.99;  // P(b)
+    dist_x[2] = 0.99;  // P(c)
+}
+
+// for F = ab'c + a'b + bc'
+//
+// P(F)   =   P(ab'c) + P(a'b) + P(bc')
+//          - P(ab'c) * P(a'b)
+//          - P(a'b)  * P(bc')
+//          - P(ab'c) * P(bc')
+//          + P(ab'c) * P(a'b) * P(bc')
+//
+// where:
+//
+// P(ab'c) = P(a)  * P(b') * P(c)
+// P(a'b)  = P(a') * P(b)
+// P(bc')  = P(b)  * P(c')
+//
+//
+// P(a')   = 1 - P(a)
+// P(b')   = 1 - P(b)
+// P(c')   = 1 - P(c)
+
+template<typename float_type>
+static float_type compute_exact_prob_F(std::vector<sampling_distribution_type> &dist_x) {
+    const auto Pa = static_cast<float_type>(dist_x[0]);
+    const auto Pb = static_cast<float_type>(dist_x[1]);
+    const auto Pc = static_cast<float_type>(dist_x[2]);
+
+    const float_type Pab_c = Pa * (1.0 - Pb) * Pc;
+    const float_type Pa_b = (1.0 - Pa) * Pb;
+    const float_type Pbc_ = Pb * (1.0 - Pc);
+
+    const float_type Pf = Pab_c + Pa_b + Pbc_
+            - (Pab_c * Pa_b)
+            - (Pa_b  * Pbc_)
+            - (Pab_c * Pbc_)
+            + (Pab_c * Pa_b * Pbc_);
+
+    assert(Pf <= 1.0 && Pf >= 0.0);
+    return Pf;
 }
 
 static std::random_device rd;
@@ -163,34 +205,40 @@ int main() {
     fill_x(dist_x);
 
     // sample from dist_x
-    const size_t num_samples = 10000;
+    const size_t num_samples = 1e8;
     auto batches = std::vector<bit_vector_type>(num_samples);
 
     // Generate and collect the tallies
-    std::vector<double_t> tallies;
-    std::vector<double_t> tallies_squared;
+    using tally_float_type = double_t;
+    std::vector<tally_float_type> tallies;
+    // Preallocate the output vectors
+    tallies.resize(num_samples);
+
+    // Apply transform in parallel
+//    std::transform(std::execution::par_unseq, tallies.begin(), tallies.end(), tallies.begin(),
+//                   [&](std::size_t /*i*/) -> tally_float_type {
+//                       const auto sample = generate_sample(dist_x);
+//                       const bool tally = eval(F, sample);
+//                       return tally ? 1.0 : 0.0;
+//                   });
+
     for (auto i = 0; i < num_samples; i++) {
         const auto sample = generate_sample(dist_x);
-
-        // Generate the tallies
-        // TODO:: Complete this as we discussed
-        const auto evaluated_tally = eval(F, sample);
-
-        // Collect the tallies
-        tallies.push_back(evaluated_tally);
-        tallies_squared.push_back(evaluated_tally * evaluated_tally);
-        std::printf("i:%i, %d, %d\n", i, sample, evaluated_tally);
+        const bool tally = eval(F, sample);
+        tallies.push_back(tally ? 1.0 : 0.0);
     }
 
-    double_t tallies_sum = std::accumulate(tallies.begin(), tallies.end(), 0.0);
-    double_t tallies_squared_sum = std::accumulate(tallies_squared.begin(), tallies_squared.end(), 0.0);
+    tally_float_type tallies_sum = std::accumulate(tallies.begin(), tallies.end(), 0.0);
+    tally_float_type tallies_squared_sum = tallies_sum;
 
-    double_t mean = tallies_sum / num_samples;
-    double_t variance_of_mean = (tallies_squared_sum / num_samples - mean * mean) / num_samples;
+    tally_float_type mean = tallies_sum / num_samples;
+    tally_float_type variance_of_mean = (tallies_squared_sum / num_samples - mean * mean) / num_samples;
 
-    std::printf("Statistics for sampled_F (Boolean to Numeric Conversion):\n");
-    std::printf("Mean: %.5f\n", mean);
-    std::printf("Variance of Mean: %.5f\n", variance_of_mean);
+    const auto known_P = compute_exact_prob_F<tally_float_type>(dist_x);
 
+    std::cout << std::setprecision(15) << std::scientific;
+    std::cout<<"P(f): "<<known_P<<std::endl;
+    std::cout<<"Statistics for sampled_F:"<<std::endl;
+    std::cout<<"tally:: "<<"count: "<<tallies.size()<<",\tmean: "<<mean<<",\tvar: "<<variance_of_mean<<std::endl;
     return 0;
 }

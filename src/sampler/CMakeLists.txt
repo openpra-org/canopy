@@ -5,6 +5,7 @@ set(SAMPLER_HEADERS
 
 set(SAMPLER_SOURCES
         stub.cpp
+        RunningStats.cpp
 )
 
 find_package(_boost)
