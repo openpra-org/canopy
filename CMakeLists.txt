@@ -1,5 +1,9 @@
 cmake_minimum_required (VERSION 3.22)
 
+set(CANOPY_VERSION_MAJOR 0)
+set(CANOPY_VERSION_MINOR 1)
+set(CANOPY_VERSION_PATCH 0)
+
 set(CMAKE_C_COMPILER clang-18)
 set(CMAKE_CXX_COMPILER clang++-18)
 
@@ -7,7 +11,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 
-project(canopy)
+project(canopy ${CANOPY_VERSION_MAJOR}.${CANOPY_VERSION_MINOR}.${CANOPY_VERSION_PATCH})
 
 # Tell CMake where the modules are.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/_cmake")
