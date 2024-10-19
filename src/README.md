@@ -37,7 +37,7 @@ output_acc[idx] = result;
 });
 ```
 
-$\sqrt{3x-1}+(1+x)^2$
+## [USM vs Buffers](https://www.intel.com/content/www/us/en/docs/oneapi/optimization-guide-gpu/2024-2/performance-impact-of-usm-and-buffers.html)
  
 ```c++
 

@@ -61,7 +61,7 @@ namespace Canopy::Bool {
          * @param output A SYCL buffer to store the output wires.
          * @param q The SYCL queue to enqueue the kernel.
          */
-        void compute(sycl::queue& q, const Wires& input, Wires& output) const {
+        void compute(cl::sycl::queue& q, const Wires& input, Wires& output) const {
             // Forward the call to the derived class's implementation
             static_cast<const Derived*>(this)->compute_impl(q, input, output);
         }

@@ -65,8 +65,6 @@ endif()
 
 add_definitions(-DHIPSYCL_DEBUG_LEVEL=${ACPP_DEBUG_LEVEL})
 
-set(ACPP_VISIBILITY_MASK "ocl")
-
 #Use add_definitions for now for older cmake versions
 cmake_policy(SET CMP0005 NEW)
 
