@@ -7,6 +7,9 @@ add_executable(bool Bool.cpp
         OrPlane.h
         pla/OpPlane.h)
 add_sycl_to_target(TARGET bool SOURCES Bool.cpp)
+
+find_package(_boost)
+
 install(TARGETS bool
         RUNTIME DESTINATION share/canopy/lib/bool)
 

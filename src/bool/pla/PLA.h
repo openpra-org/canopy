@@ -56,13 +56,13 @@ namespace Canopy::Bool {
          * @param input A SYCL buffer containing the input wires.
          * @param output A SYCL buffer to store the output wires.
          */
-        void compute_impl(sycl::queue& q, const Wires& input, Wires& output) const {
+        void compute_impl(cl::sycl::queue& q, const Wires& input, Wires& output) const {
             // Example SYCL kernel performing AND and OR operations
-            q.submit([&](sycl::handler& cgh) {
-                auto in = input.get_access<sycl::access::mode::read>(cgh);
-                auto out = output.get_access<sycl::access::mode::write>(cgh);
+            q.submit([&](cl::sycl::handler& cgh) {
+                auto in = input.get_access<cl::sycl::access::mode::read>(cgh);
+                auto out = output.get_access<cl::sycl::access::mode::write>(cgh);
 
-                cgh.parallel_for<class PLAKernel>(sycl::range<1>(this->output_width_), [=](sycl::id<1> idx) {
+                cgh.parallel_for<class PLAKernel>(cl::sycl::range<1>(this->output_width_), [=](cl::sycl::id<1> idx) {
                     // Perform AND operations (example)
                     Wires and_result = 0;
                     for (size_t i = 0; i < this->input_width_; ++i) {
