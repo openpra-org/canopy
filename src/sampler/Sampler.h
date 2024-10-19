@@ -1,50 +1,39 @@
-/*
-    Copyright (C) 2024 OpenPRA Initiative
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published
-    by the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-
 #ifndef CANOPY_SAMPLER_H
 #define CANOPY_SAMPLER_H
 
 #include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
+#include <boost/accumulators/statistics/quantile.hpp>
+#include <boost/accumulators/statistics/extended_p_square.hpp>
+#include <stdexcept> // For std::out_of_range
 
 // Namespace alias for convenience
 namespace acc = boost::accumulators;
 
 // Define the accumulator type with required statistical features
-typedef acc::accumulator_set<
+using accumulator_type = acc::accumulator_set<
         double,
         acc::features<
                 acc::tag::mean,
                 acc::tag::variance,
-                acc::tag::skewness,
-                acc::tag::kurtosis,
-                acc::tag::median,
-                acc::tag::quantile
+                acc::tag::extended_p_square // Required for quantile calculations
         >
-> accumulator_type;
+>;
 
 // Helper Functions to Extract Statistics
 
 /**
  * @brief Computes the mean of the accumulated values.
  *
- * @param acc The accumulator containing the data.
+ * @param acc_set The accumulator containing the data.
  * @return The mean value.
+ * @throws std::runtime_error if the accumulator is empty.
  */
 double get_mean(const accumulator_type& acc_set) {
+    if (acc_set.count() == 0) {
+        throw std::runtime_error("Accumulator is empty. Cannot compute mean.");
+    }
     return acc::mean(acc_set);
 }
 
