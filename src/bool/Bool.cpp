@@ -1,9 +1,8 @@
 #include <iostream>
 #include <vector>
+#include <numeric>
 
 #include <CL/sycl.hpp>
-
-#include <sampler/Sampler.h>
 
 // TODO:: define a templated type, with concrete overrides for uint8_t, uint16_t, uint32_t, uint64_t, etc...
 using sampling_distribution_type = double_t;
@@ -138,7 +137,7 @@ static std::uniform_real_distribution<sampling_distribution_type> uniform_dist(0
 
 // TODO:: returned object should be aligned with cache-line
 // maybe return 64-bit width value here?
-static inline uint8_t sample(const std::vector<sampling_distribution_type> &dist_x) {
+static inline uint8_t generate_sample(const std::vector<sampling_distribution_type> &dist_x) {
 
     const auto sampled =
             static_cast<uint8_t>(
@@ -167,47 +166,31 @@ int main() {
     const size_t num_samples = 10000;
     auto batches = std::vector<bit_vector_type>(num_samples);
 
-
-    // Initialize the accumulator
-    accumulator_type acc_set(
-            acc::tag::quantile::prob = 0.5 // Default quantile (median)
-    );
-
+    // Generate and collect the tallies
+    std::vector<double_t> tallies;
+    std::vector<double_t> tallies_squared;
     for (auto i = 0; i < num_samples; i++) {
-        const auto sampled_x = sample(dist_x);
-        const auto sampled_F = eval(F, sampled_x);
-        // Convert sampled_F to double (0.0 or 1.0) for accumulation
-        auto sampled_F_numeric = static_cast<std::double_t>(sampled_F);
+        const auto sample = generate_sample(dist_x);
 
-        // Accumulate the sampled_F value
-        acc_set(sampled_F_numeric);
-        std::printf("i:%d, %b, %b\n", i, sampled_x, sampled_F);
+        // Generate the tallies
+        // TODO:: Complete this as we discussed
+        const auto evaluated_tally = eval(F, sample);
+
+        // Collect the tallies
+        tallies.push_back(evaluated_tally);
+        tallies_squared.push_back(evaluated_tally * evaluated_tally);
+        std::printf("i:%i, %d, %d\n", i, sample, evaluated_tally);
     }
 
-    try {
-        double mean = get_mean(acc_set);
-        double variance = get_variance(acc_set);
-        double skewness = get_skewness(acc_set);
-        double kurtosis = get_kurtosis(acc_set);
-        double median = get_median(acc_set);
-        double p5th = get_quantile(acc_set, 0.05);
-        double p95th = get_quantile(acc_set, 0.95);
+    double_t tallies_sum = std::accumulate(tallies.begin(), tallies.end(), 0.0);
+    double_t tallies_squared_sum = std::accumulate(tallies_squared.begin(), tallies_squared.end(), 0.0);
 
-        // Display the results with appropriate formatting
-        std::printf("Statistics for sampled_F (Boolean to Numeric Conversion):\n");
-        std::printf("Mean: %.5f\n", mean);
-        std::printf("Variance: %.5f\n", variance);
-        std::printf("Skewness: %.5f\n", skewness);
-        std::printf("Kurtosis: %.5f\n", kurtosis);
-        std::printf("Median: %.5f\n", median);
-        std::printf("5th Percentile (p5th): %.5f\n", p5th);
-        std::printf("95th Percentile (p95th): %.5f\n", p95th);
-    }
-    catch (const std::exception& ex) {
-        std::fprintf(stderr, "Error computing statistics: %s\n", ex.what());
-        return EXIT_FAILURE;
-    }
+    double_t mean = tallies_sum / num_samples;
+    double_t variance_of_mean = (tallies_squared_sum / num_samples - mean * mean) / num_samples;
 
+    std::printf("Statistics for sampled_F (Boolean to Numeric Conversion):\n");
+    std::printf("Mean: %.5f\n", mean);
+    std::printf("Variance of Mean: %.5f\n", variance_of_mean);
 
     return 0;
 }
