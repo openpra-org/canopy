@@ -201,7 +201,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
           -DWITH_OPENCL_BACKEND=ON \
           -DWITH_ROCM_BACKEND=ON \
           -DWITH_LEVEL_ZERO_BACKEND=ON  \
-          -DACPP_COMPILER_FEATURE_PROFILE="full".. && \
+          -DACPP_COMPILER_FEATURE_PROFILE="full" .. && \
     make -j && \
     make install
 
