@@ -21,13 +21,26 @@
 #include <stdexcept>
 
 /**
- * @namespace canopy::stats
- * @brief A namespace for statistical functions and structures.
+ * @namespace canopy::sampler
+ * @brief A namespace for statistics of boolean tallies, i.e. tallies where the outcome is 0 or 1. The mean and variance
+ * estimators in this case are largely simplified since there is no need to maintain a tally vector or a tally_squared
+ * vector. This saves [2 * NUM_SAMPLES * sizeof(long double)] bytes of space, which is welcome, but takes away the
+ * ability to develop a weighted-tally sampling technique.
  */
-namespace canopy::stats {
+namespace canopy::sampler {
+
+    template<typename float_type, typename size_type>
+    class Summary {
+
+    };
+
+    template<typename float_type, typename size_type>
+    static inline float_type mean(size_type count, size_type samples) {
+        return (static_cast<float_type>(count) / static_cast<float_type>(samples));
+    }
 
     template<typename T>
-    std::pair<T, T> confidence_interval(T mean, std::size_t num_samples, T confidence_level) {
+    static std::pair<T, T> confidence_interval(T mean, std::size_t num_samples, T confidence_level) {
         if (num_samples == 0) {
             throw std::invalid_argument("Number of samples must be greater than 0.");
         }
