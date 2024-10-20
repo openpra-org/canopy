@@ -5,7 +5,8 @@
 
 #include <CL/sycl.hpp>
 #include <iomanip>
-#include "sampler/stats.h"
+
+#include "stats/stats.h"
 
 // TODO:: define a templated type, with concrete overrides for uint8_t, uint16_t, uint32_t, uint64_t, etc...
 using sampling_distribution_type = double_t;
@@ -30,7 +31,7 @@ using products = std::vector<T>;
 // -------------------------------------------------
 // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
 // -------------------------------------------------
-static inline void set_F(products<uint8_t> &F) {
+static inline void set_F(products<uint8_t> &F, size_t index) {
     // first element: encodes ab'c
     // -------------------------------------------------
     // |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
@@ -39,7 +40,7 @@ static inline void set_F(products<uint8_t> &F) {
     // -------------------------------------------------
     // |  1  |  0  |  0  |  1  |  1  |  0  |  0  |  0  |
     // -------------------------------------------------
-    F[0] = 0b01100111;
+    F[index] = 0b01100111;
 
     // second element: encodes a'b
     // -------------------------------------------------
@@ -47,7 +48,7 @@ static inline void set_F(products<uint8_t> &F) {
     // -------------------------------------------------
     // |  0  |  1  |  1  |  0  |  0  |  0  |  0  |  0  |
     // -------------------------------------------------
-    F[1] = 0b10011111;
+    F[index+1] = 0b10011111;
 
     // third element: encodes bc'
     // -------------------------------------------------
@@ -55,7 +56,7 @@ static inline void set_F(products<uint8_t> &F) {
     // -------------------------------------------------
     // |  0  |  0  |  1  |  0  |  0  |  1  |  0  |  0  |
     // -------------------------------------------------
-    F[2] = 0b11011011;
+    F[index+2] = 0b11011011;
 
     // fourth element: encodes a'bc'
     // -------------------------------------------------
@@ -63,7 +64,7 @@ static inline void set_F(products<uint8_t> &F) {
     // -------------------------------------------------
     // |  0  |  1  |  1  |  0  |  0  |  1  |  0  |  0  |
     // -------------------------------------------------
-    F[3] = 0b10011011;
+    F[index+3] = 0b10011011;
 
     // fifth element: encodes aa'aacc'
     // repeated terms have no effect
@@ -86,7 +87,7 @@ static inline void set_F(products<uint8_t> &F) {
     // -------------------------------------------------
     // |  1  |  1  |  0  |  0  |  1  |  1  |  0  |  0  |
     // -------------------------------------------------
-    F[4] = 0b00010011;
+    F[index+4] = 0b00010011;
 }
 
 /**
@@ -133,10 +134,10 @@ static float_type compute_exact_prob_F(std::vector<sampling_distribution_type> &
     const float_type Pbc_  = Pb * Pc_;
 
     // Intersection of A'B and BC' (i.e., A'BC')
-    const float_type Pa_b_Pbc_ = Pa_ * Pb * Pc_;
+    const float_type Pa_bANDPbc_ = Pa_ * Pb * Pc_;
 
     // Compute P(F)
-    const float_type Pf = Pab_c + Pa_b + Pbc_ - Pa_b_Pbc_;
+    const float_type Pf = Pab_c + Pa_b + Pbc_ - Pa_bANDPbc_;
 
     assert(Pf <= 1.0 && Pf >= 0.0);
     return Pf;
@@ -163,10 +164,14 @@ int main() {
     // for expression F = ab'c + a'b + bc' + a'bc' + aa'aacc'a, with
     // m = 5 products
     const size_t m_products = 5;
-    std::vector<bit_vector_type> F(m_products);
+    // n = 5 duplicates
+    const size_t m_duplicates = 10;
+    std::vector<bit_vector_type> F(m_products*m_duplicates);
 
-    // set the function
-    set_F(F);
+    // set the function and duplicate the products multiple times
+    for (auto i = 0; i < m_duplicates; i++) {
+        set_F(F,i*5);
+    }
 
     // define the probabilities for X
     const size_t s_symbols = 3;

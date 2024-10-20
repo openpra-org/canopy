@@ -1,11 +1,8 @@
 add_executable(bool bool.cpp
-        term.h
         pla/LogicBlock.h
         pla/PLA.h
-        OpPlane.h
-        AndPlane.h
-        OrPlane.h
-        pla/OpPlane.h)
+        stats/stats.h
+)
 
 target_compile_options(bool PRIVATE --acpp-stdpar --acpp-stdpar-unconditional-offload)
 target_compile_definitions(bool PRIVATE -DHIPSYCL_STDPAR_MEMORY_MANAGEMENT_DEFAULT_DISABLED)
