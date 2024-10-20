@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <random>
 
-//#include "utils/profiler.h"
+#include "utils/profiler.h"
 #include "utils/stats.h"
 
 // todo:: add doxygen comments
@@ -14,7 +14,7 @@
 // TODO:: define a templated type, with concrete overrides for uint8_t, uint16_t, uint32_t, uint64_t, etc...
 using sampling_distribution_type = long double; /// typically 32-bit wide
 using tally_float_type = long double; /// typically 80-bit wide, larger than double_t
-using bit_vector_type = uint_fast64_t;
+using bit_vector_type = uint_fast8_t;
 
 // TODO:: encode repeating symbols
 template<typename T>
@@ -190,30 +190,29 @@ int main() {
     const auto known_P = compute_exact_prob_F<tally_float_type>(dist_x);
 
     std::cout << std::setprecision(15) << std::scientific;
-    std::cout<<"F = ab'c + a'b + bc'"<<std::endl;
     std::cout<<"P(a): "<<dist_x[0]<<"\nP(b): "<<dist_x[1]<<"\nP(c): "<<dist_x[2]<<std::endl;
 
     // sample from dist_x
     const size_t num_samples = 1e7;
     std::size_t count = 0;    // Generate and collect the tallies
 
-    // todo:: std lamda syntax
-    for (auto i = 0; i < num_samples; i++) {
-        const auto sample = generate_sample(dist_x);
-        const bool tally = eval(F, sample);
-        if (tally) {
-            count++;
-        }
-    }
-//    const auto profiler = Profiler([&]() {
-//
-//    }, 10, 0, "F = ab'c + a'b + bc', x=3, products=5000, samples=1e7, runs=10").run();
-//
-//    std::cout<<profiler; // print the profiler summary
 
+    const auto profiler = canopy::utils::Profiler([&]() {
+        count = 0;
+        // todo:: std lamda syntax
+        for (auto i = 0; i < num_samples; i++) {
+            const auto sample = generate_sample(dist_x);
+            const bool tally = eval(F, sample);
+            if (tally) {
+                count++;
+            }
+        }
+    }, 20, 0, "F=ab'c+a'b+bc', x=3, term<width>=uint_fast8_t, products=50, samples=1e7").run();
 
     const auto stats = canopy::utils::SummaryStatistics<tally_float_type, size_t>(count, num_samples, known_P);
     std::cout<<stats;
+
+    std::cout<<profiler; // print the profiler summary
 
     return 0;
 }
