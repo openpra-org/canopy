@@ -2,8 +2,8 @@
  * @file random.h
  * @author Arjun Earthperson
  * @date 10/20/2024
- * @brief This file contains the canopy::utils namespace which provides functions for generating random vectors and
- * matrices.
+ * @brief This file contains the canopy::utils::random namespace which provides functions for generating random vectors
+ * and matrices.
  */
 
 #ifndef CANOPY_UTILS_RANDOM_H
@@ -15,10 +15,10 @@
 #include <memory>
 
 /**
- * @namespace canopy::utils
+ * @namespace canopy::utils::random
  * @brief This namespace provides functions for generating random vectors and matrices.
  */
-namespace canopy::utils {
+namespace canopy::utils::random {
 
     /**
      * @brief Generates a single random number.
@@ -50,15 +50,15 @@ namespace canopy::utils {
      * @param seed The seed for the random number generator.
      * @return A vector of random numbers.
      */
-    template <typename vector_type, typename T>
-    static vector_type generate_vector(const size_t n, T min = 0, T max = 1, const size_t seed = 372) {
+    template <typename T>
+    static std::vector<T> generate_vector(const size_t n, T min = 0, T max = 1, const size_t seed = 372) {
         if (max < min) {
             std::swap(min, max);
         }
         std::random_device rd;
         std::mt19937 stream(seed);
         std::uniform_real_distribution<T> uniform(min, max);
-        vector_type samples(n);
+        std::vector<T> samples(n);
 
         // Use std::generate to fill the vector with random numbers
         std::generate(samples.begin(), samples.end(), [&]() { return uniform(stream); });

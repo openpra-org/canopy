@@ -5,7 +5,9 @@
 
 #include <iomanip>
 #include <random>
+#include <CL/sycl.hpp>
 
+#include "utils/random.h"
 #include "utils/profiler.h"
 #include "utils/stats.h"
 
@@ -173,8 +175,9 @@ int main() {
     // m = 5 products
     const size_t m_products = 5;
     // n = 10 duplicates
-    const size_t n_duplicates = 10;
-    std::vector<bit_vector_type> F(m_products * n_duplicates);
+    const size_t n_duplicates = 1000;
+    const size_t F_size = m_products * n_duplicates;
+    std::vector<bit_vector_type> F(F_size);
 
     // set the function and duplicate the products multiple times
     // todo:: std lamda syntax
@@ -187,32 +190,79 @@ int main() {
     auto dist_x = std::vector<sampling_distribution_type>(s_symbols);
     fill_x(dist_x);
 
+    const size_t num_samples = 1e7;
+    const size_t num_rands = num_samples * s_symbols;
+    const auto rand_numbers = canopy::utils::random::generate_vector<sampling_distribution_type>(num_rands);
+
+    // Create SYCL buffers
+    cl::sycl::queue queue;
+    cl::sycl::buffer<bit_vector_type, 1> F_buf(F.data(), cl::sycl::range<1>(F_size));
+    cl::sycl::buffer<sampling_distribution_type, 1> dist_x_buf(dist_x.data(), cl::sycl::range<1>(s_symbols));
+    cl::sycl::buffer<sampling_distribution_type, 1> rand_numbers_buf(rand_numbers.data(), cl::sycl::range<1>(num_rands));
+    cl::sycl::buffer<int, 1> result_buf(cl::sycl::range<1>(1));
+
+    // Initialize result to zero
+    {
+        auto acc = result_buf.get_access<cl::sycl::access::mode::discard_write>();
+        acc[0] = 0;
+    }
+
+    queue.submit([&](cl::sycl::handler& cgh) {
+        auto F_acc = F_buf.get_access<cl::sycl::access::mode::read>(cgh);
+        auto dist_x_acc = dist_x_buf.get_access<cl::sycl::access::mode::read>(cgh);
+        auto rand_numbers_acc = rand_numbers_buf.get_access<cl::sycl::access::mode::read>(cgh);
+        auto result_acc = result_buf.get_access<cl::sycl::access::mode::atomic>(cgh);
+
+        cgh.parallel_for<class sample_eval_kernel>(cl::sycl::range<1>(num_samples), [=](cl::sycl::id<1> idx) {
+            size_t i = idx[0];
+
+            // Generate sample
+            sampling_distribution_type rand_a = rand_numbers_acc[i * s_symbols];
+            sampling_distribution_type rand_b = rand_numbers_acc[i * s_symbols + 1];
+            sampling_distribution_type rand_c = rand_numbers_acc[i * s_symbols + 2];
+
+            bit_vector_type sample = static_cast<bit_vector_type>(
+                    (rand_a > dist_x_acc[0] ? 0b01000000 : 0b10000000) |
+                    (rand_b > dist_x_acc[1] ? 0b00010000 : 0b00100000) |
+                    (rand_c > dist_x_acc[2] ? 0b00000100 : 0b00001000)
+            );
+
+            // Evaluate F
+            bool tally = false;
+            for (size_t j = 0; j < F_size; j++) {
+                bit_vector_type row = F_acc[j];
+                if ((sample | row) == 0b11111111) {
+                    tally = true;
+                    break; // Early exit
+                }
+            }
+            // Atomic increment
+            if (tally) {
+                cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed, cl::sycl::memory_scope::device, cl::sycl::access::address_space::global_space> count_atomic(result_acc[0]);
+                count_atomic.fetch_add(1);
+            }
+        });
+    });
+    queue.wait_and_throw();
+
+
+    // Retrieve result
+    size_t count = 0;
+    {
+        auto acc = result_buf.get_access<cl::sycl::access::mode::read>();
+        count = acc[0];
+    }
+
     const auto known_P = compute_exact_prob_F<tally_float_type>(dist_x);
 
     std::cout << std::setprecision(15) << std::scientific;
     std::cout<<"P(a): "<<dist_x[0]<<"\nP(b): "<<dist_x[1]<<"\nP(c): "<<dist_x[2]<<std::endl;
 
-    // sample from dist_x
-    const size_t num_samples = 1e7;
-    std::size_t count = 0;    // Generate and collect the tallies
-
-
-    const auto profiler = canopy::utils::Profiler([&]() {
-        count = 0;
-        // todo:: std lamda syntax
-        for (auto i = 0; i < num_samples; i++) {
-            const auto sample = generate_sample(dist_x);
-            const bool tally = eval(F, sample);
-            if (tally) {
-                count++;
-            }
-        }
-    }, 20, 0, "F=ab'c+a'b+bc', x=3, term<width>=uint_fast8_t, products=50, samples=1e7").run();
 
     const auto stats = canopy::utils::SummaryStatistics<tally_float_type, size_t>(count, num_samples, known_P);
     std::cout<<stats;
 
-    std::cout<<profiler; // print the profiler summary
+    //std::cout<<profiler; // print the profiler summary
 
     return 0;
 }
