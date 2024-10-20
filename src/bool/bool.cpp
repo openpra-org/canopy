@@ -3,15 +3,18 @@
 #include <numeric>
 #include <algorithm>
 
-#include <CL/sycl.hpp>
 #include <iomanip>
+#include <random>
 
-#include "stats/stats.h"
+//#include "utils/profiler.h"
+#include "utils/stats.h"
+
+// todo:: add doxygen comments
 
 // TODO:: define a templated type, with concrete overrides for uint8_t, uint16_t, uint32_t, uint64_t, etc...
-using sampling_distribution_type = double_t;
-
-using bit_vector_type = uint8_t; //std::bitset<8>;
+using sampling_distribution_type = long double; /// typically 32-bit wide
+using tally_float_type = long double; /// typically 80-bit wide, larger than double_t
+using bit_vector_type = uint_fast64_t;
 
 // TODO:: encode repeating symbols
 template<typename T>
@@ -31,14 +34,14 @@ using products = std::vector<T>;
 // -------------------------------------------------
 // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
 // -------------------------------------------------
-static inline void set_F(products<uint8_t> &F, size_t index) {
+static inline void set_F(products<bit_vector_type> &F, const size_t index) {
     // first element: encodes ab'c
     // -------------------------------------------------
     // |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
     // -------------------------------------------------
     // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
     // -------------------------------------------------
-    // |  1  |  0  |  0  |  1  |  1  |  0  |  0  |  0  |
+    // |  0  |  1  |  1  |  0  |  0  |  1  |  1  |  1  |
     // -------------------------------------------------
     F[index] = 0b01100111;
 
@@ -46,7 +49,7 @@ static inline void set_F(products<uint8_t> &F, size_t index) {
     // -------------------------------------------------
     // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
     // -------------------------------------------------
-    // |  0  |  1  |  1  |  0  |  0  |  0  |  0  |  0  |
+    // |  1  |  0  |  0  |  1  |  1  |  1  |  1  |  1  |
     // -------------------------------------------------
     F[index+1] = 0b10011111;
 
@@ -54,7 +57,7 @@ static inline void set_F(products<uint8_t> &F, size_t index) {
     // -------------------------------------------------
     // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
     // -------------------------------------------------
-    // |  0  |  0  |  1  |  0  |  0  |  1  |  0  |  0  |
+    // |  1  |  1  |  0  |  1  |  1  |  0  |  1  |  1  |
     // -------------------------------------------------
     F[index+2] = 0b11011011;
 
@@ -62,7 +65,7 @@ static inline void set_F(products<uint8_t> &F, size_t index) {
     // -------------------------------------------------
     // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
     // -------------------------------------------------
-    // |  0  |  1  |  1  |  0  |  0  |  1  |  0  |  0  |
+    // |  1  |  0  |  0  |  1  |  1  |  0  |  1  |  1  |
     // -------------------------------------------------
     F[index+3] = 0b10011011;
 
@@ -85,7 +88,7 @@ static inline void set_F(products<uint8_t> &F, size_t index) {
     // -------------------------------------------------
     // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
     // -------------------------------------------------
-    // |  1  |  1  |  0  |  0  |  1  |  1  |  0  |  0  |
+    // |  0  |  0  |  1  |  1  |  0  |  0  |  1  |  1  |
     // -------------------------------------------------
     F[index+4] = 0b00010011;
 }
@@ -105,8 +108,13 @@ constexpr inline bool bitwise_and_all(T x) noexcept {
 }
 
 // return word-sized object instead of 1-bit.
-static constexpr inline bool eval(auto &F, auto &sampled_x) {
-    return std::ranges::any_of(F, [&](uint8_t row) {
+static inline bool eval(const auto &F, const auto &sampled_x) {
+    // todo:: [optimization]
+    // todo:: confirm that any_of will yield and terminate the calculation as soon as any row evals to true.
+    // todo:: confirm that any_of does not enforce any execution order for which rows are evaluated first.
+    // todo:: together, these two constraints can leverage faster out-of-order, pre-emptive execution
+    // todo:: ensure that this intent is communicated/articulated in the sycl kernels or stl functions
+    return std::ranges::any_of(F, [&](bit_vector_type row) {
         return (sampled_x | row) == 0b11111111;
     });
 }
@@ -149,10 +157,10 @@ static std::uniform_real_distribution<sampling_distribution_type> uniform_dist(0
 
 // TODO:: returned object should be aligned with cache-line
 // maybe return 64-bit width value here?
-static inline uint8_t generate_sample(const std::vector<sampling_distribution_type> &dist_x) {
+static inline bit_vector_type generate_sample(const std::vector<sampling_distribution_type> &dist_x) {
 
     const auto sampled =
-            static_cast<uint8_t>(
+            static_cast<bit_vector_type>(
                     (uniform_dist(gen) > dist_x[0] ? 0b01000000 : 0b10000000) |
                     (uniform_dist(gen) > dist_x[1] ? 0b00010000 : 0b00100000) |
                     (uniform_dist(gen) > dist_x[2] ? 0b00000100 : 0b00001000));
@@ -164,13 +172,14 @@ int main() {
     // for expression F = ab'c + a'b + bc' + a'bc' + aa'aacc'a, with
     // m = 5 products
     const size_t m_products = 5;
-    // n = 5 duplicates
-    const size_t m_duplicates = 10;
-    std::vector<bit_vector_type> F(m_products*m_duplicates);
+    // n = 10 duplicates
+    const size_t n_duplicates = 10;
+    std::vector<bit_vector_type> F(m_products * n_duplicates);
 
     // set the function and duplicate the products multiple times
-    for (auto i = 0; i < m_duplicates; i++) {
-        set_F(F,i*5);
+    // todo:: std lamda syntax
+    for (auto i = 0; i < n_duplicates; i++) {
+        set_F(F, i*m_products);
     }
 
     // define the probabilities for X
@@ -178,12 +187,17 @@ int main() {
     auto dist_x = std::vector<sampling_distribution_type>(s_symbols);
     fill_x(dist_x);
 
+    const auto known_P = compute_exact_prob_F<tally_float_type>(dist_x);
+
+    std::cout << std::setprecision(15) << std::scientific;
+    std::cout<<"F = ab'c + a'b + bc'"<<std::endl;
+    std::cout<<"P(a): "<<dist_x[0]<<"\nP(b): "<<dist_x[1]<<"\nP(c): "<<dist_x[2]<<std::endl;
+
     // sample from dist_x
     const size_t num_samples = 1e7;
+    std::size_t count = 0;    // Generate and collect the tallies
 
-    // Generate and collect the tallies
-    using tally_float_type = long double;
-    std::size_t count = 0;
+    // todo:: std lamda syntax
     for (auto i = 0; i < num_samples; i++) {
         const auto sample = generate_sample(dist_x);
         const bool tally = eval(F, sample);
@@ -191,21 +205,15 @@ int main() {
             count++;
         }
     }
+//    const auto profiler = Profiler([&]() {
+//
+//    }, 10, 0, "F = ab'c + a'b + bc', x=3, products=5000, samples=1e7, runs=10").run();
+//
+//    std::cout<<profiler; // print the profiler summary
 
-    const auto mean = static_cast<tally_float_type>(count) / num_samples;
-    const auto variance_of_mean = (mean - mean * mean) / num_samples;
 
-    const auto p95_confidence = canopy::stats::confidence_interval<tally_float_type>(mean, num_samples, 0.95);
-    const auto known_P = compute_exact_prob_F<tally_float_type>(dist_x);
-    const auto error = mean - known_P;
-    const auto rel_error = 100.0 * error / known_P;
-    std::cout << std::setprecision(8) << std::scientific;
-    std::cout<<"F = ab'c + a'b + bc'"<<std::endl;
-    std::cout<<"P(a): "<<dist_x[0]<<", P(b): "<<dist_x[1]<<", P(c): "<<dist_x[2]<<std::endl;
-    std::cout<<"known P(f): "<<known_P<<std::endl;
-    std::cout<<"\nStatistics for sampled_F:"<<std::endl;
-    std::cout<<"tally:: "<<"num_true/num_samples: "<<count<<"/"<<num_samples<<",\tmean: "<<mean<<",\tvar: "<<variance_of_mean<<std::endl;
-    std::cout<<"error [sampled - known]: "<<error<<",\trelative error (%): "<<rel_error<<std::endl;
-    std::cout << "95% Confidence Interval for P(F): (" << p95_confidence.first << ", " << p95_confidence.second << ")" << std::endl;
+    const auto stats = canopy::utils::SummaryStatistics<tally_float_type, size_t>(count, num_samples, known_P);
+    std::cout<<stats;
+
     return 0;
 }

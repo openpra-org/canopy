@@ -2,12 +2,12 @@
  * @file random.h
  * @author Arjun Earthperson
  * @date 10/20/2024
- * @brief This file contains the canopy::sampler namespace which provides functions for generating random vectors and
+ * @brief This file contains the canopy::utils namespace which provides functions for generating random vectors and
  * matrices.
  */
 
-#ifndef CANOPY_SAMPLER_RANDOM_H
-#define CANOPY_SAMPLER_RANDOM_H
+#ifndef CANOPY_UTILS_RANDOM_H
+#define CANOPY_UTILS_RANDOM_H
 
 #include <algorithm>
 #include <random>
@@ -15,10 +15,10 @@
 #include <memory>
 
 /**
- * @namespace canopy::sampler
+ * @namespace canopy::utils
  * @brief This namespace provides functions for generating random vectors and matrices.
  */
-namespace canopy::sampler {
+namespace canopy::utils {
 
     /**
      * @brief Generates a single random number.
@@ -86,4 +86,4 @@ namespace canopy::sampler {
     }
 
 } // namespace Random
-#endif // CANOPY_SAMPLER_RANDOM_H
+#endif // CANOPY_UTILS_RANDOM_H
