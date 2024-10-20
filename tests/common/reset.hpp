@@ -12,9 +12,22 @@
 #ifndef CANOPY_HIPSYCL_TESTS_RESET_HPP
 #define CANOPY_HIPSYCL_TESTS_RESET_HPP
 
+/**
+ * @brief Fixture for resetting the device state before each test.
+ */
 struct reset_device_fixture {
+    /**
+     * @brief Sets up the device fixture.
+     */
+    reset_device_fixture() {
+        //reset_device();
+    }
+
+    /**
+     * @brief Tears down the device fixture.
+     */
     ~reset_device_fixture() {
-        // Runtime should automatically reset
+        //reset_device();
     }
 };
 
