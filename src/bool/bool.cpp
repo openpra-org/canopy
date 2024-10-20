@@ -5,6 +5,7 @@
 
 #include <CL/sycl.hpp>
 #include <iomanip>
+#include "sampler/stats.h"
 
 // TODO:: define a templated type, with concrete overrides for uint8_t, uint16_t, uint32_t, uint64_t, etc...
 using sampling_distribution_type = double_t;
@@ -14,9 +15,6 @@ using bit_vector_type = uint8_t; //std::bitset<8>;
 // TODO:: encode repeating symbols
 template<typename T>
 using products = std::vector<T>;
-
-template<typename T>
-using term = std::vector<T>;
 
 // for expression F = ab'c + a'b + bc' + a'bc' + aa'baacc'ab, with:
 //
@@ -107,66 +105,38 @@ constexpr inline bool bitwise_and_all(T x) noexcept {
 
 // return word-sized object instead of 1-bit.
 static constexpr inline bool eval(auto &F, auto &sampled_x) {
-//    for (auto &row : F) {
-//        if ((sampled_x | row) == 0b11111111)
-//            return true;
-//    }
-//    return false;
-
     return std::ranges::any_of(F, [&](uint8_t row) {
         return (sampled_x | row) == 0b11111111;
     });
 }
 
-bool eval_and(const auto &F_and, const auto &x) {
-
-}
-
-bool eval_or(const auto &F_or, const auto &and_matrix) {
-
-}
-
 // a | b =
 static void fill_x(std::vector<sampling_distribution_type> &dist_x) {
-    dist_x[0] = 1e-2;  // P(a)
-    dist_x[1] = 2e-3;  // P(b)
-    dist_x[2] = 3e-1;  // P(c)
+    dist_x[0] = 1e-3;  // P(a)
+    dist_x[1] = 1e-4;  // P(b)
+    dist_x[2] = 1e-5;  // P(c)
 }
-
-// for F = ab'c + a'b + bc'
-//
-// P(F)   =   P(ab'c) + P(a'b) + P(bc')
-//          - P(ab'c) * P(a'b)
-//          - P(a'b)  * P(bc')
-//          - P(ab'c) * P(bc')
-//          + P(ab'c) * P(a'b) * P(bc')
-//
-// where:
-//
-// P(ab'c) = P(a)  * P(b') * P(c)
-// P(a'b)  = P(a') * P(b)
-// P(bc')  = P(b)  * P(c')
-//
-//
-// P(a')   = 1 - P(a)
-// P(b')   = 1 - P(b)
-// P(c')   = 1 - P(c)
 
 template<typename float_type>
 static float_type compute_exact_prob_F(std::vector<sampling_distribution_type> &dist_x) {
-    const auto Pa = static_cast<float_type>(dist_x[0]);
-    const auto Pb = static_cast<float_type>(dist_x[1]);
-    const auto Pc = static_cast<float_type>(dist_x[2]);
+    const auto Pa  = static_cast<float_type>(dist_x[0]);
+    const auto Pb  = static_cast<float_type>(dist_x[1]);
+    const auto Pc  = static_cast<float_type>(dist_x[2]);
+    const auto P1  = static_cast<float_type>(1.0);
+    const auto Pa_ = P1 - Pa;
+    const auto Pb_ = P1 - Pb;
+    const auto Pc_ = P1 - Pc;
 
-    const float_type Pab_c = Pa * (1.0 - Pb) * Pc;
-    const float_type Pa_b = (1.0 - Pa) * Pb;
-    const float_type Pbc_ = Pb * (1.0 - Pc);
+    // Individual probabilities
+    const float_type Pab_c = Pa * Pb_ * Pc;
+    const float_type Pa_b  = Pa_ * Pb;
+    const float_type Pbc_  = Pb * Pc_;
 
-    const float_type Pf = Pab_c + Pa_b + Pbc_
-            - (Pab_c * Pa_b)
-            - (Pa_b  * Pbc_)
-            - (Pab_c * Pbc_)
-            + (Pab_c * Pa_b * Pbc_);
+    // Intersection of A'B and BC' (i.e., A'BC')
+    const float_type Pa_b_Pbc_ = Pa_ * Pb * Pc_;
+
+    // Compute P(F)
+    const float_type Pf = Pab_c + Pa_b + Pbc_ - Pa_b_Pbc_;
 
     assert(Pf <= 1.0 && Pf >= 0.0);
     return Pf;
@@ -205,7 +175,6 @@ int main() {
 
     // sample from dist_x
     const size_t num_samples = 1e7;
-    auto batches = std::vector<bit_vector_type>(num_samples);
 
     // Generate and collect the tallies
     using tally_float_type = long double;
@@ -221,6 +190,7 @@ int main() {
     const auto mean = static_cast<tally_float_type>(count) / num_samples;
     const auto variance_of_mean = (mean - mean * mean) / num_samples;
 
+    const auto p95_confidence = canopy::stats::confidence_interval<tally_float_type>(mean, num_samples, 0.95);
     const auto known_P = compute_exact_prob_F<tally_float_type>(dist_x);
     const auto error = mean - known_P;
     const auto rel_error = 100.0 * error / known_P;
@@ -231,5 +201,6 @@ int main() {
     std::cout<<"\nStatistics for sampled_F:"<<std::endl;
     std::cout<<"tally:: "<<"num_true/num_samples: "<<count<<"/"<<num_samples<<",\tmean: "<<mean<<",\tvar: "<<variance_of_mean<<std::endl;
     std::cout<<"error [sampled - known]: "<<error<<",\trelative error (%): "<<rel_error<<std::endl;
+    std::cout << "95% Confidence Interval for P(F): (" << p95_confidence.first << ", " << p95_confidence.second << ")" << std::endl;
     return 0;
 }
