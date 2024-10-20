@@ -1,20 +1,9 @@
 #ifndef CANOPY_STATS_H
 #define CANOPY_STATS_H
 
-/**
-* @file Stats.h
-* @author Arjun Earthperson
-* @date 10/18/2024
-* @brief This file contains wrappers for statistical helper functions.
-*/
-
 #include <algorithm>
 #include <cmath>
 #include <numeric>
-#include <ostream>
-#include <vector>
-#include <iostream>
-#include <iomanip>
 
 #include <boost/math/distributions/normal.hpp>
 #include <utility>
