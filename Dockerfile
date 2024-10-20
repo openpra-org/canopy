@@ -45,7 +45,6 @@ ENV SRC_BUILD_PACKAGES="automake \
     libgmp-dev \
     libginac-dev \
     libglpk-dev \
-    libgtest-dev \
     libhwloc-dev \
     libnuma-dev \
     libxerces-c-dev \
