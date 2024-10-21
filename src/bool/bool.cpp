@@ -18,9 +18,22 @@ using sampling_distribution_type = float; /// typically 32-bit wide
 using tally_float_type = float; /// typically 80-bit wide, larger than double_t
 using bit_vector_type = uint_fast8_t;
 
+static constexpr const std::size_t F_size = 1000000;
+
 // TODO:: encode repeating symbols
 template<typename T>
-using products = std::vector<T>;
+using products = std::array<T, F_size>;
+
+// declare statically
+static products<bit_vector_type> F;
+
+// for expression F = ab'c + a'b + bc' + a'bc' + aa'aacc'a, with
+// m = 5 products
+static constexpr const size_t m_products = 5;
+// n = 10 duplicates
+static constexpr const size_t n_duplicates = 200000;
+
+
 
 // for expression F = ab'c + a'b + bc' + a'bc' + aa'baacc'ab, with:
 //
@@ -36,7 +49,7 @@ using products = std::vector<T>;
 // -------------------------------------------------
 // |  a  |  a' |  b  |  b' |  c  |  c' |  -  |  -  |
 // -------------------------------------------------
-static inline void set_F(products<bit_vector_type> &F, const size_t index) {
+static inline void set_F(products<bit_vector_type> &F_, const size_t index) {
     // first element: encodes ab'c
     // -------------------------------------------------
     // |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
@@ -45,7 +58,7 @@ static inline void set_F(products<bit_vector_type> &F, const size_t index) {
     // -------------------------------------------------
     // |  0  |  1  |  1  |  0  |  0  |  1  |  1  |  1  |
     // -------------------------------------------------
-    F[index] = 0b01100111;
+    F_[index] = 0b01100111;
 
     // second element: encodes a'b
     // -------------------------------------------------
@@ -53,7 +66,7 @@ static inline void set_F(products<bit_vector_type> &F, const size_t index) {
     // -------------------------------------------------
     // |  1  |  0  |  0  |  1  |  1  |  1  |  1  |  1  |
     // -------------------------------------------------
-    F[index+1] = 0b10011111;
+    F_[index+1] = 0b10011111;
 
     // third element: encodes bc'
     // -------------------------------------------------
@@ -61,7 +74,7 @@ static inline void set_F(products<bit_vector_type> &F, const size_t index) {
     // -------------------------------------------------
     // |  1  |  1  |  0  |  1  |  1  |  0  |  1  |  1  |
     // -------------------------------------------------
-    F[index+2] = 0b11011011;
+    F_[index+2] = 0b11011011;
 
     // fourth element: encodes a'bc'
     // -------------------------------------------------
@@ -69,7 +82,7 @@ static inline void set_F(products<bit_vector_type> &F, const size_t index) {
     // -------------------------------------------------
     // |  1  |  0  |  0  |  1  |  1  |  0  |  1  |  1  |
     // -------------------------------------------------
-    F[index+3] = 0b10011011;
+    F_[index+3] = 0b10011011;
 
     // fifth element: encodes aa'aacc'
     // repeated terms have no effect
@@ -92,31 +105,17 @@ static inline void set_F(products<bit_vector_type> &F, const size_t index) {
     // -------------------------------------------------
     // |  0  |  0  |  1  |  1  |  0  |  0  |  1  |  1  |
     // -------------------------------------------------
-    F[index+4] = 0b00010011;
-}
-
-/**
- * @brief Performs a bitwise AND reduction on all bits of a uint8_t value.
- *
- * This function returns `true` if all bits in the input byte are set to `1`,
- * and `false` otherwise.
- *
- * @param x The uint8_t value to be reduced via bitwise AND.
- * @return `true` if all bits are `1`, `false` otherwise.
- */
-template<typename T>
-constexpr inline bool bitwise_and_all(T x) noexcept {
-    return x == std::numeric_limits<T>::max();
+    F_[index+4] = 0b00010011;
 }
 
 // return word-sized object instead of 1-bit.
-static inline bool eval(const auto &F, const auto &sampled_x) {
+static inline bool eval(const auto &F_, const auto &sampled_x) {
     // todo:: [optimization]
     // todo:: confirm that any_of will yield and terminate the calculation as soon as any row evals to true.
     // todo:: confirm that any_of does not enforce any execution order for which rows are evaluated first.
     // todo:: together, these two constraints can leverage faster out-of-order, pre-emptive execution
     // todo:: ensure that this intent is communicated/articulated in the sycl kernels or stl functions
-    return std::ranges::any_of(F, [&](bit_vector_type row) {
+    return std::ranges::any_of(F_, [&](bit_vector_type row) {
         return (sampled_x | row) == 0b11111111;
     });
 }
@@ -171,13 +170,6 @@ static inline bit_vector_type generate_sample(const std::vector<sampling_distrib
 }
 
 int main() {
-    // for expression F = ab'c + a'b + bc' + a'bc' + aa'aacc'a, with
-    // m = 5 products
-    const size_t m_products = 5;
-    // n = 10 duplicates
-    const size_t n_duplicates = 200000;
-    const size_t F_size = m_products * n_duplicates;
-    std::vector<bit_vector_type> F(F_size);
 
     // set the function and duplicate the products multiple times
     // todo:: std lambda syntax
@@ -192,7 +184,12 @@ int main() {
 
     const size_t num_samples = 1e7;
     const size_t num_rands = num_samples * s_symbols;
-    const auto rand_numbers = canopy::utils::random::generate_vector<sampling_distribution_type>(num_rands);
+    std::vector<sampling_distribution_type> rand_numbers;
+
+    std::cout<<canopy::utils::Profiler([&]() {
+        rand_numbers = canopy::utils::random::generate_vector<sampling_distribution_type>(num_rands);
+    }, 1, 0, "generate random number vector, num_samples=1e7, float32").run();
+
 
     // Create SYCL buffers
     cl::sycl::queue queue;
@@ -215,39 +212,30 @@ int main() {
             auto result_acc = result_buf.get_access<cl::sycl::access::mode::read_write>(cgh);
 
             cgh.parallel_for<class sample_eval_kernel>(cl::sycl::range<1>(num_samples), [=](cl::sycl::id<1> idx) {
-                size_t i = idx[0];
+                const size_t i = idx[0];
 
                 // Generate sample
-                sampling_distribution_type rand_a = rand_numbers_acc[i * s_symbols];
-                sampling_distribution_type rand_b = rand_numbers_acc[i * s_symbols + 1];
-                sampling_distribution_type rand_c = rand_numbers_acc[i * s_symbols + 2];
-
-                bit_vector_type sample = static_cast<bit_vector_type>(
-                        (rand_a > dist_x_acc[0] ? 0b01000000 : 0b10000000) |
-                        (rand_b > dist_x_acc[1] ? 0b00010000 : 0b00100000) |
-                        (rand_c > dist_x_acc[2] ? 0b00000100 : 0b00001000)
-                );
-
-                // Evaluate F
-                bool tally = false;
-                for (size_t j = 0; j < F_size; j++) {
-                    bit_vector_type row = F_acc[j];
-                    if ((sample | row) == 0b11111111) {
-                        tally = true;
-                        break; // Early exit
-                    }
+                const size_t x_max = 3;
+                bit_vector_type sample = 0b00000000;
+                for(auto o = 0; o < x_max; o++) {
+                    const auto rand = rand_numbers_acc[(i * s_symbols) + o];
+                    const auto shift_by= 2*o + (rand > dist_x_acc[o]);
+                    sample |= (0b10000000 >> shift_by);
                 }
 
-                // Atomic increment
-                if (tally) {
-                    cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed, cl::sycl::memory_scope::device, cl::sycl::access::address_space::global_space> count_atomic(result_acc[0]);
-                    count_atomic.fetch_add(1);
+                // Evaluate F
+                for (auto j = 0; j < F_size; j++) {
+                    if ((sample | F_acc[j]) == 0b11111111) {
+                        // atomic increment the tally and exit
+                        cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed, cl::sycl::memory_scope::device, cl::sycl::access::address_space::global_space> count_atomic(result_acc[0]);
+                        count_atomic.fetch_add(1);
+                        break; // Early exit
+                    }
                 }
             });
         });
         queue.wait_and_throw();
     }, 2, 0, "F=ab'c+a'b+bc', x=3, term<width>=uint_fast8_t, products=1e6, samples=1e7").run();
-
 
     // Retrieve result
     size_t count = 0;
@@ -269,3 +257,66 @@ int main() {
 
     return 0;
 }
+
+// cgh.parallel_for<class sample_eval_kernel>(
+//                cl::sycl::nd_range<1>(cl::sycl::range<1>(num_work_groups * work_group_size),
+//                                      cl::sycl::range<1>(work_group_size)),
+//                [=](cl::sycl::nd_item<1> item) {
+//                    size_t global_id = item.get_global_id(0);
+//                    size_t local_id = item.get_local_id(0);
+//
+//                    // Initialize local count
+//                    if (local_id == 0) {
+//                        local_counts[0] = 0;
+//                    }
+//                    item.barrier(cl::sycl::access::fence_space::local_space);
+//
+//                    if (global_id < num_samples) {
+//                        // Generate sample
+//                        const size_t rand_idx = global_id * s_symbols;
+//                        const sampling_distribution_type rand_a = rand_numbers_acc[rand_idx];
+//                        const sampling_distribution_type rand_b = rand_numbers_acc[rand_idx + 1];
+//                        const sampling_distribution_type rand_c = rand_numbers_acc[rand_idx + 2];
+//
+//                        bit_vector_type sample = static_cast<bit_vector_type>(
+//                                (rand_a > dist_x_acc[0] ? 0b01000000 : 0b10000000) |
+//                                (rand_b > dist_x_acc[1] ? 0b00010000 : 0b00100000) |
+//                                (rand_c > dist_x_acc[2] ? 0b00000100 : 0b00001000)
+//                        );
+//
+//                        // Evaluate F
+//                        bool tally = false;
+//                        for (size_t j = 0; j < F_size; j++) {
+//                            bit_vector_type row = F_acc[j];
+//                            if ((sample | row) == 0b11111111) {
+//                                tally = true;
+//                                break; // Early exit
+//                            }
+//                        }
+//
+//                        // Atomic increment
+//                        if (tally) {
+//                            //cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed, cl::sycl::memory_scope::device, cl::sycl::access::address_space::global_space> count_atomic(result_acc[0]);
+//                            //count_atomic.fetch_add(1);
+//                            // Use atomic operation on local memory
+//                            cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
+//                                    cl::sycl::memory_scope::work_group,
+//                                    cl::sycl::access::address_space::local_space> local_count_atomic(
+//                                    local_counts[0]);
+//                            local_count_atomic.fetch_add(1);
+//                        }
+//                    }
+//
+//                    // Ensure all work-items have updated local_counts
+//                    item.barrier(cl::sycl::access::fence_space::local_space);
+//
+//                    // Work-group leader updates the global count
+//                    if (local_id == 0) {
+//                        // Use atomic operation on global memory
+//                        cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
+//                                cl::sycl::memory_scope::device,
+//                                cl::sycl::access::address_space::global_space> result_atomic(result_acc[0]);
+//                        result_atomic.fetch_add(local_counts[0]);
+//                    }
+//                });
+//    }

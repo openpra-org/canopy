@@ -66,24 +66,5 @@ namespace canopy::utils::random {
         return samples;
     }
 
-    /**
-     * @brief Generates a LazyVector of random numbers.
-     * @tparam T The type of the elements in the vector.
-     * @param n The size of the vector.
-     * @param min The minimum value for the random numbers.
-     * @param max The maximum value for the random numbers.
-     * @param seed The seed for the random number generator.
-     * @return A LazyVector of random numbers.
-     */
-    template <typename vector_type, typename T>
-    static vector_type lazy_generate_vector(const size_t n, T min = 0, T max = 1, const size_t seed = 372) {
-        if (max < min) {
-            std::swap(min, max);
-        }
-        auto stream = std::make_shared<std::mt19937>(seed);
-        std::uniform_real_distribution<T> uniform(min, max);
-        return vector_type(n, [stream, uniform](size_t) mutable { return uniform(*stream); });
-    }
-
 } // namespace Random
 #endif // CANOPY_UTILS_RANDOM_H
