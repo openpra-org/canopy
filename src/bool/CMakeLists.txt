@@ -1,4 +1,5 @@
 set(BOOL_HEADERS
+        bits.h
 )
 
 set(BOOL_SOURCES
