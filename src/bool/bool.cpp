@@ -1,8 +1,6 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
-#include <algorithm>
-
 #include <iomanip>
 #include <random>
 #include <CL/sycl.hpp>
@@ -14,8 +12,8 @@
 // todo:: add doxygen comments
 
 // TODO:: define a templated type, with concrete overrides for uint8_t, uint16_t, uint32_t, uint64_t, etc...
-using sampling_distribution_type = float; /// typically 32-bit wide
-using tally_float_type = float; /// typically 80-bit wide, larger than double_t
+using sampling_distribution_type = float_t; /// typically 32-bit wide
+using tally_float_type = float_t;
 using bit_vector_type = uint_fast8_t;
 
 // for expression F = ab'c + a'b + bc' + a'bc' + aa'aacc'a, with
@@ -28,7 +26,7 @@ static constexpr const size_t n_duplicates = 200000;
 // total products = 1e6
 static constexpr const std::size_t F_size = m_products * n_duplicates;
 // declare a static array for storing the known event X probabilities
-using known_event_probabilities = std::array<sampling_distribution_type, s_symbols>;
+using known_event_probabilities = std::array<tally_float_type, s_symbols>;
 
 // TODO:: encode repeating symbols
 template<typename T, size_t size>
@@ -125,18 +123,6 @@ static inline void set_F(products<bit_vector_type, size> &F_, const size_t index
     F_[index+4] = 0b00010011;
 }
 
-// return word-sized object instead of 1-bit.
-static inline bool eval(const auto &F_, const auto &sampled_x) {
-    // todo:: [optimization]
-    // todo:: confirm that any_of will yield and terminate the calculation as soon as any row evals to true.
-    // todo:: confirm that any_of does not enforce any execution order for which rows are evaluated first.
-    // todo:: together, these two constraints can leverage faster out-of-order, pre-emptive execution
-    // todo:: ensure that this intent is communicated/articulated in the sycl kernels or stl functions
-    return std::ranges::any_of(F_, [&](bit_vector_type row) {
-        return (sampled_x | row) == 0b11111111;
-    });
-}
-
 template<typename float_type>
 static constexpr float_type compute_exact_prob_F(const known_event_probabilities &dist_x) {
     const auto Pa  = static_cast<float_type>(dist_x[0]);
@@ -162,9 +148,9 @@ static constexpr float_type compute_exact_prob_F(const known_event_probabilities
     return Pf;
 }
 
-static void sample_and_assign_truth_values(const known_event_probabilities &to_sample_from, std::vector<bit_vector_type> &sampled_x) {
+static void sample_and_assign_truth_values(const known_event_probabilities &to_sample_from, std::vector<bit_vector_type> &sampled_x, const std::size_t seed = 372) {
     std::random_device rd;
-    std::mt19937 stream(372);
+    std::mt19937 stream(seed);
     std::uniform_real_distribution<sampling_distribution_type> uniform(0, 1);
 
     // Use std::generate to fill the vector with random numbers
@@ -236,6 +222,11 @@ int main() {
 
                 // Evaluate F
                 for (auto j = 0; j < F_size; j++) {
+                    // todo:: [optimization]
+                    // todo:: confirm that any_of will yield and terminate the calculation as soon as any row evals to true.
+                    // todo:: confirm that any_of does not enforce any execution order for which rows are evaluated first.
+                    // todo:: together, these two constraints can leverage faster out-of-order, pre-emptive execution
+                    // todo:: ensure that this intent is communicated/articulated in the sycl kernels or stl functions
                     if ((sample | F_acc[j]) == 0b11111111) {
                         // atomic increment the tally and exit
                         cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed, cl::sycl::memory_scope::device, cl::sycl::access::address_space::global_space> count_atomic(result_acc[0]);
@@ -243,10 +234,84 @@ int main() {
                         break; // Early exit
                     }
                 }
+
+            /**
+             * @brief Implicants / Products
+             * -----------
+             * A product (F_acc[j]) is an implicant for F if ANY assignment (sample_x[i] | F_acc[j]) evals to 0b11111111.
+             * This is because in the SOP representation, any product evaluating to ⊤ will make F ⊤. This because
+             * F, as defined, is in SOP form. So, for F in the form F = p1 + p2 + p3, if any product p evals to ⊤,
+             * F evals to ⊤. You can think of operations in (sample_x[i] | F_acc[j]) as the AND-PLANE in an AND-OR
+             * PLA (programmable logic array).
+             *
+             * We expect that a well-formed product will be an implicant. What do I mean by well-formed?
+             *  (1) no mutually exclusive events i.e. aa'
+             *  (2) no always empty events: abcd, where d was not part of X, so it never gets a truth assignment
+             *
+             * So what's left now are products that take at-least *some* input from the sampling vector X, which
+             * makes the product evaluate to ⊤. of course, during sampling, we might not have encountered such an
+             * input, *yet*.
+             *
+             * In a more straight forward sense, the assignment for X that makes any product ⊤ is the definition
+             * of the product itself, i.e. a product a'b'c evals to ⊤ when a=⊥, b=⊥, c=⊤. This is what product is.
+             **/
+
+             /**
+             * @brief Prime Implicants
+             * -----------------
+             * A prime implicant is an implicant that cannot be further reduced by removing any literals without
+             * ceasing to be an implicant. That is, it is a minimal implicant in terms of the number of literals.
+             *
+             * In the function F(a, b) = ab + a'c,
+             *
+             *     - The product term **P = ab** is a prime implicant; removing any literal (either **a** or **b**)
+             *       results in a term that is not an implicant of F because it would evaluate to true in cases where F
+             *       is false.
+             *
+             *     - However, the term **abc** is not a prime implicant because it can be reduced to **ab**
+             *       (by eliminating **c**) while still being an implicant of F. Therefore, **abc** is not minimal and
+             *       thus not prime.
+             **/
+
+             /**
+             * @brief Essential Prime Implicants
+             * ---------------------------
+             * A prime implicant is `essential` if there exists an assignment X for that prime implicant that makes
+             * F eval to ⊤ while all other products make F eval to ⊥ for that assignment. In other words, An
+             * essential prime implicant is a prime implicant that covers at least one minterm (truth-table row
+             * where the function evaluates to true) that is not covered by any other prime implicant. The key is
+             * that there are outputs that only this prime implicant can account for.
+             *
+             * In other words, an essential prime implicant is a prime implicant that covers at least one minterm
+             * (a combination of variable assignments where F is true) that is not covered by any other prime implicant.
+             * These minterms are exclusively covered by this prime implicant.
+             *
+             * Consider F(a, b, c) with the truth table where F is true for minterms m1, m2, and m5.
+             *      Let:
+             *          - **P1** be a prime implicant covering minterms m1 and m5.
+             *          - **P2** be a prime implicant covering minterms m2 and m5.
+             *
+             *      Minterm m1 is only covered by **P1**, so **P1** is an essential prime implicant.
+             *      Minterm m2 is only covered by **P2**, so **P2** is also an essential prime implicant.
+             *      Minterm m5 is covered by both **P1** and **P2**, so it does not affect the essentiality of either implicant.
+             **/
+
+             /**
+             * @brief Minimal Sum-of-Products (SoP
+             * ------------------------
+             *
+             * Every minimal SoP consists of a sum of prime implicants. This does not imply that a minimal SoP
+             * contains *all* prime implicants. Rather, a minimal SoP contains *all* essential prime implicants, but
+             * it may also contain non-essential prime implicants.
+             *
+             * Therefore, A minimal SoP expression for F is an expression that represents F using the
+             * fewest possible product terms (and thus the fewest literals). It consists of all essential prime
+             * implicants and, if necessary, additional prime implicants to cover all minterms where F is true.
+             **/
             });
         });
         queue.wait_and_throw();
-    }, 2, 0, "F=ab'c+a'b+bc', x=3, term<width>=uint_fast8_t, products=1e6, samples=1e7").run();
+    }, 1, 0, "F=ab'c+a'b+bc', x=3, term<width>=uint_fast8_t, products=1e6, samples=1e7").run();
 
     // Retrieve result
     size_t count = 0;
@@ -267,66 +332,3 @@ int main() {
 
     return 0;
 }
-
-// cgh.parallel_for<class sample_eval_kernel>(
-//                cl::sycl::nd_range<1>(cl::sycl::range<1>(num_work_groups * work_group_size),
-//                                      cl::sycl::range<1>(work_group_size)),
-//                [=](cl::sycl::nd_item<1> item) {
-//                    size_t global_id = item.get_global_id(0);
-//                    size_t local_id = item.get_local_id(0);
-//
-//                    // Initialize local count
-//                    if (local_id == 0) {
-//                        local_counts[0] = 0;
-//                    }
-//                    item.barrier(cl::sycl::access::fence_space::local_space);
-//
-//                    if (global_id < num_samples) {
-//                        // Generate sample
-//                        const size_t rand_idx = global_id * s_symbols;
-//                        const sampling_distribution_type rand_a = rand_numbers_acc[rand_idx];
-//                        const sampling_distribution_type rand_b = rand_numbers_acc[rand_idx + 1];
-//                        const sampling_distribution_type rand_c = rand_numbers_acc[rand_idx + 2];
-//
-//                        bit_vector_type sample = static_cast<bit_vector_type>(
-//                                (rand_a > dist_x_acc[0] ? 0b01000000 : 0b10000000) |
-//                                (rand_b > dist_x_acc[1] ? 0b00010000 : 0b00100000) |
-//                                (rand_c > dist_x_acc[2] ? 0b00000100 : 0b00001000)
-//                        );
-//
-//                        // Evaluate F
-//                        bool tally = false;
-//                        for (size_t j = 0; j < F_size; j++) {
-//                            bit_vector_type row = F_acc[j];
-//                            if ((sample | row) == 0b11111111) {
-//                                tally = true;
-//                                break; // Early exit
-//                            }
-//                        }
-//
-//                        // Atomic increment
-//                        if (tally) {
-//                            //cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed, cl::sycl::memory_scope::device, cl::sycl::access::address_space::global_space> count_atomic(result_acc[0]);
-//                            //count_atomic.fetch_add(1);
-//                            // Use atomic operation on local memory
-//                            cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
-//                                    cl::sycl::memory_scope::work_group,
-//                                    cl::sycl::access::address_space::local_space> local_count_atomic(
-//                                    local_counts[0]);
-//                            local_count_atomic.fetch_add(1);
-//                        }
-//                    }
-//
-//                    // Ensure all work-items have updated local_counts
-//                    item.barrier(cl::sycl::access::fence_space::local_space);
-//
-//                    // Work-group leader updates the global count
-//                    if (local_id == 0) {
-//                        // Use atomic operation on global memory
-//                        cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
-//                                cl::sycl::memory_scope::device,
-//                                cl::sycl::access::address_space::global_space> result_atomic(result_acc[0]);
-//                        result_atomic.fetch_add(local_counts[0]);
-//                    }
-//                });
-//    }

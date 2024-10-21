@@ -25,6 +25,14 @@ docker run -d \
   canopy:ssh-debugger
 ```
 
+### Develop on macOS
+Since macOS does not support OpenCL, CUDA, HIP, Level Zero, ...ugh anything but Metal and OpenMP, support is currently
+limited. It should still be possible to develop for testing purposes. Start by installing brew, and then AdaptiveCpp.
+Please open a PR if you make any progress here...
+
+```zsh
+brew install seanfarley/adaptivecpp/adaptivecpp
+```
 ### Tested Versions
 - CUDA: 12.4.1
 - LLVM/Clang: 18.1.8
