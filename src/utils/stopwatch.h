@@ -1,3 +1,6 @@
+#ifndef CANOPY_UTILS_STOPWATCH_H
+#define CANOPY_UTILS_STOPWATCH_H
+
 /**
  * @file stopwatch.h
  * @author Arjun Earthperson
@@ -31,9 +34,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
-#ifndef CANOPY_UTILS_STOPWATCH_H
-#define CANOPY_UTILS_STOPWATCH_H
 
 #include <chrono>
 

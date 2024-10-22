@@ -1,9 +1,10 @@
 set(UTILS_HEADERS
-        random.h
         stats.h
         profile.h
         profiler.h
         stopwatch.h
+        bits.h
+        types.h
 )
 
 set(UTILS_SOURCES

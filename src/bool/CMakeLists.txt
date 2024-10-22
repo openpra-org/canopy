@@ -1,5 +1,4 @@
 set(BOOL_HEADERS
-        bits.h
 )
 
 set(BOOL_SOURCES
@@ -7,9 +6,6 @@ set(BOOL_SOURCES
 )
 
 add_executable(bool ${BOOL_SOURCES} ${BOOL_HEADERS})
-
-target_compile_options(bool PRIVATE --acpp-stdpar --acpp-stdpar-unconditional-offload)
-target_compile_definitions(bool PRIVATE -DHIPSYCL_STDPAR_MEMORY_MANAGEMENT_DEFAULT_DISABLED)
 
 add_sycl_to_target(TARGET bool utils SOURCES ${BOOL_SOURCES} ${BOOL_HEADERS})
 

@@ -1,6 +1,16 @@
 #ifndef CANOPY_BITS_H
 #define CANOPY_BITS_H
 
+/**
+ * @file bits.h
+ * @author Arjun Earthperson
+ * @date 10/21/2024
+ * @brief This file contains logic for wrapping bit-manipulations around multi-word-sized primitives. The objective is
+ * to enable a handful, highly restricted, and highly optimized access patterns, essentially getting the benefits from
+ * a container like `std::bitset`, without the added overhead of maintaining bit-level address-ability. Optimizations
+ * can be made for different bit-widths using template specialization for differing data types.
+ */
+
 #include <limits>
 #include <array>
 #include <cstdint>

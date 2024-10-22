@@ -1,3 +1,6 @@
+#ifndef CANOPY_UTILS_RANDOM_H
+#define CANOPY_UTILS_RANDOM_H
+
 /**
  * @file random.h
  * @author Arjun Earthperson
@@ -5,9 +8,6 @@
  * @brief This file contains the canopy::utils::random namespace which provides functions for generating random vectors
  * and matrices.
  */
-
-#ifndef CANOPY_UTILS_RANDOM_H
-#define CANOPY_UTILS_RANDOM_H
 
 #include <algorithm>
 #include <random>

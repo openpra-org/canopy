@@ -1,12 +1,12 @@
+#ifndef CANOPY_UTILS_PROFILER_H
+#define CANOPY_UTILS_PROFILER_H
+
 /**
-* @file Profiler.h
+* @file profiler.h
 * @author Arjun Earthperson
 * @date 10/20/2024
 * @brief This file contains the Profiler class which is used to profile the execution time of a function.
 */
-
-#ifndef CANOPY_UTILS_PROFILER_H
-#define CANOPY_UTILS_PROFILER_H
 
 #include <fstream>
 #include <functional>

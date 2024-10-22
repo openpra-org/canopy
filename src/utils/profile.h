@@ -1,12 +1,12 @@
+#ifndef CANOPY_UTILS_PROFILE_H
+#define CANOPY_UTILS_PROFILE_H
+
 /**
 * @file profile.h
 * @author Arjun Earthperson
 * @date 10/20/2024
 * @brief This file contains the declaration of stats created from profiling runs.
 */
-
-#ifndef CANOPY_UTILS_PROFILE_H
-#define CANOPY_UTILS_PROFILE_H
 
 #include <algorithm>
 #include <cmath>

@@ -1,6 +1,14 @@
 #ifndef CANOPY_UTILS_STATS_H
 #define CANOPY_UTILS_STATS_H
 
+/**
+* @file stats.h
+* @author Arjun Earthperson
+* @date 10/20/2024
+* @brief This file contains the statistical utility functions for estimating the mean, variance, and associated
+* confidence intervals.
+*/
+
 #include <algorithm>
 #include <cmath>
 #include <numeric>
