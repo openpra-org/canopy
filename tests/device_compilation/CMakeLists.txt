@@ -1,0 +1,4 @@
+
+add_executable(device_compilation_tests device_compilation_tests.cpp)
+target_include_directories(device_compilation_tests PRIVATE ${Boost_INCLUDE_DIRS} ${OpenMP_CXX_INCLUDE_DIRS})
+add_sycl_to_target(TARGET device_compilation_tests)

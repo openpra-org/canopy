@@ -15,17 +15,24 @@ docker build -t canopy:ssh-debugger --target=ssh-debugger .
 ```
 
 #### docker run
+In daemon mode:
 ```bash
-docker run --rm -it \
-    -p 2222:22 \ # port forward to localhost:2222 for an ssh dev session
-    #--device=/dev/kfd \
-    --device=/dev/dri:/dev/dri \
-    --cap-add=ALL \ # unsafe, only needed for optional intel_gpu_top
-    --group-add video \
-    canopy:ssh-debugger
-    /bin/bash
+docker run -d \
+  --name=canopy-dev \
+  -p 2222:2222 \
+  --device=/dev/dri \
+  --cap-add=ALL \
+  canopy:ssh-debugger
 ```
 
+### Develop on macOS
+Since macOS does not support OpenCL, CUDA, HIP, Level Zero, ...ugh anything but Metal and OpenMP, support is currently
+limited. It should still be possible to develop for testing purposes. Start by installing brew, and then AdaptiveCpp.
+Please open a PR if you make any progress here...
+
+```zsh
+brew install seanfarley/adaptivecpp/adaptivecpp
+```
 ### Tested Versions
 - CUDA: 12.4.1
 - LLVM/Clang: 18.1.8

@@ -1,3 +1,4 @@
-add_subdirectory(bool)
+# for boost tests
+find_package(_boost COMPONENTS unit_test_framework REQUIRED)
 
-include_directories("${PROJECT_SOURCE_DIR}/tests")
+add_subdirectory(device_compilation)

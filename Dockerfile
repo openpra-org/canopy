@@ -45,7 +45,6 @@ ENV SRC_BUILD_PACKAGES="automake \
     libgmp-dev \
     libginac-dev \
     libglpk-dev \
-    libgtest-dev \
     libhwloc-dev \
     libnuma-dev \
     libxerces-c-dev \
@@ -200,7 +199,8 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
           -DWITH_CUDA_BACKEND=ON \
           -DWITH_OPENCL_BACKEND=ON \
           -DWITH_ROCM_BACKEND=ON \
-          -DWITH_LEVEL_ZERO_BACKEND=ON .. && \
+          -DWITH_LEVEL_ZERO_BACKEND=ON  \
+          -DACPP_COMPILER_FEATURE_PROFILE="full" .. && \
     make -j && \
     make install
 

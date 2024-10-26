@@ -1,5 +1,9 @@
 cmake_minimum_required (VERSION 3.22)
 
+set(CANOPY_VERSION_MAJOR 0)
+set(CANOPY_VERSION_MINOR 1)
+set(CANOPY_VERSION_PATCH 0)
+
 set(CMAKE_C_COMPILER clang-18)
 set(CMAKE_CXX_COMPILER clang++-18)
 
@@ -7,7 +11,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 
-project(canopy)
+project(canopy VERSION ${CANOPY_VERSION_MAJOR}.${CANOPY_VERSION_MINOR}.${CANOPY_VERSION_PATCH})
 
 # Tell CMake where the modules are.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/_cmake")
@@ -65,8 +69,6 @@ endif()
 
 add_definitions(-DHIPSYCL_DEBUG_LEVEL=${ACPP_DEBUG_LEVEL})
 
-set(ACPP_VISIBILITY_MASK "ocl")
-
 #Use add_definitions for now for older cmake versions
 cmake_policy(SET CMP0005 NEW)
 
@@ -101,7 +103,6 @@ add_subdirectory(src)
 if (BUILD_TESTS)
     include(CTest)
     enable_testing()
-    find_package(_googletest)
     add_subdirectory(tests)
 endif ()
 
