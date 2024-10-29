@@ -36,7 +36,7 @@
 //#define bitmask_merge(a,b,abits) ((a & abits) | (b & ~abits))
 #define bitmask_merge(a,b,abits) (b ^ ((a ^ b) & abits))
 
-// Swap lowest four bits. A nibble is 4 bits (i.e. half a byte)
+// Swap the lowest four bits. A nibble is 4 bits (i.e. half a byte)
 #define rev_nibble(x) ((((x)&1)<<3)|(((x)&2)<<1)|(((x)&4)>>1)|(((x)&8)>>3))
 
 //
@@ -119,7 +119,7 @@
 
 //
 // Compact bit array of spin locks
-// These are most effecient when arr is of type: volatile char*
+// These are most efficient when arr is of type: volatile char*
 //
 // Acquire a lock
 #define bitlock_acquire_block(arr,pos,wait,abandon) do {                       \
