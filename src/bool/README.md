@@ -39,3 +39,44 @@ runs: [2] : F=ab'c+a'b+bc', x=3, term<width>=uint_fast8_t, products=1e6, samples
 Process finished with exit code 0
 
 ```
+
+```shell
+/tmp/tmp.xQ8wveOZzU/cmake-build-release/src/bool/bool_et
+M1 = 
+[   0.84000   0.16000 ]
+[   0.60000   0.40000 ]
+[   0.66000   0.34000 ]
+
+M2 = 
+[   1.00000   0.00000   0.00000   0.00000   0.00000 ]
+[   0.00000   0.20000   0.60000   0.10000   0.10000 ]
+
+M3 = 
+[   0.84000   0.03200   0.09600   0.01600   0.01600 ]
+[   0.60000   0.08000   0.24000   0.04000   0.04000 ]
+[   0.66000   0.06800   0.20400   0.03400   0.03400 ]
+
+Entry State: Normal
+  Probability of 'Alive, None, Not Cancelled': 0.84000
+  Probability of 'Dead, Minor, Not Cancelled': 0.03200
+  Probability of 'Dead, Moderate, Not Cancelled': 0.09600
+  Probability of 'Dead, Major, Not Cancelled': 0.01600
+  Probability of 'Dead, Major, Cancelled': 0.01600
+
+Entry State: Sleepy
+  Probability of 'Alive, None, Not Cancelled': 0.60000
+  Probability of 'Dead, Minor, Not Cancelled': 0.08000
+  Probability of 'Dead, Moderate, Not Cancelled': 0.24000
+  Probability of 'Dead, Major, Not Cancelled': 0.04000
+  Probability of 'Dead, Major, Cancelled': 0.04000
+
+Entry State: Speeding
+  Probability of 'Alive, None, Not Cancelled': 0.66000
+  Probability of 'Dead, Minor, Not Cancelled': 0.06800
+  Probability of 'Dead, Moderate, Not Cancelled': 0.20400
+  Probability of 'Dead, Major, Not Cancelled': 0.03400
+  Probability of 'Dead, Major, Cancelled': 0.03400
+
+
+Process finished with exit code 0
+```

@@ -24,7 +24,7 @@ using sampling_distribution_type = std::float_t;
  * @brief The floating-point data type used for tallying probabilities.
  * @details Typically a 32-bit floating-point type.
  */
-using tally_float_type = float_t;
+using tally_float_type = std::float_t;
 
 /**
  * @typedef bit_vector_type
