@@ -1,5 +1,5 @@
 #include "bit_ops.h"
-#include "bit_array.h"
+#include "bar/bit_array.h"
 
 bool any(BIT_ARRAY *bits) {
     bit_index_t result;

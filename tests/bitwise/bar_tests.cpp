@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
 
-#include "bitwise/bit_array.h"
+#include "src/bitwise/bar/bit_array.h"
 #include <cstring>
 #include <string>
 
