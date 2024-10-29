@@ -6,10 +6,10 @@ using namespace std;
 
 // Function to multiply two matrices
 vector<vector<double>> multiplyMatrices(const vector<vector<double>>& A, const vector<vector<double>>& B) {
-    int rowsA = A.size();
-    int colsA = A[0].size(); // Assuming A is not empty and is a valid matrix
-    int rowsB = B.size();
-    int colsB = B[0].size();
+    size_t rowsA = A.size();
+    size_t colsA = A[0].size(); // Assuming A is not empty and is a valid matrix
+    size_t rowsB = B.size();
+    size_t colsB = B[0].size();
 
     // Check if multiplication is possible
     if (colsA != rowsB) {
@@ -21,9 +21,9 @@ vector<vector<double>> multiplyMatrices(const vector<vector<double>>& A, const v
     vector<vector<double>> result(rowsA, vector<double>(colsB, 0.0));
 
     // Perform multiplication
-    for (int i = 0; i < rowsA; ++i) {
-        for (int k = 0; k < colsA; ++k) {
-            for (int j = 0; j < colsB; ++j) {
+    for (size_t i = 0; i < rowsA; ++i) {
+        for (size_t k = 0; k < colsA; ++k) {
+            for (size_t j = 0; j < colsB; ++j) {
                 result[i][j] += A[i][k] * B[k][j];
             }
         }
