@@ -3,6 +3,7 @@ set(BOOL_HEADERS
 
 set(BOOL_SOURCES
         bool.cpp
+        kaplan_et.cpp
 )
 
 add_executable(bool ${BOOL_SOURCES} ${BOOL_HEADERS})
