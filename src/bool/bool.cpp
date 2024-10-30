@@ -327,36 +327,14 @@ int main() {
         sample_and_assign_truth_values(Px, sampled_x);
     }, 1, 0, "generate random number vector, num_samples=1e7, float32").run();
 
-    // Create SYCL buffers
     cl::sycl::queue queue;
+    auto dev = queue.get_device();
+    auto device_info = DeviceInfo(dev);
+    std::cout<<device_info<<std::endl;
+
     cl::sycl::buffer<bit_vector_type, 1> F_buf(F.data(), cl::sycl::range<1>(F_size));
     cl::sycl::buffer<bit_vector_type, 1> sampled_x_buf(sampled_x.data(), cl::sycl::range<1>(sampled_x.size()));
     cl::sycl::buffer<int, 1> result_buf(cl::sycl::range<1>(1));
-
-    std::cout<<DeviceInfo(queue.get_device());
-
-    /**
-     * @brief Compute Optimal Work Group Sizes
-     *
-     * Based on the hardware information:
-     * - Max Compute Units: 22
-     * - Max Work Item Sizes: 64, 1024, 1024
-     * - Max Work Group Size: 1024
-     *
-     * We'll split the work such that it optimally utilizes the compute units.
-     * We'll process the data in chunks of samples and products to fit within the hardware constraints.
-     */
-    const size_t max_work_items_dim0 = 64;
-    const size_t max_work_items_dim1 = 1024;
-    const size_t max_work_group_size = 1024;
-
-    // Define block sizes for products and samples
-    const size_t product_block_size = max_work_items_dim0;   // 64
-    const size_t sample_block_size = max_work_items_dim1;    // 1024
-
-    // Calculate the number of blocks needed
-    const size_t num_product_blocks = (F_size + product_block_size - 1) / product_block_size;
-    const size_t num_sample_blocks = (num_samples + sample_block_size - 1) / sample_block_size;
 
     const auto profiler = canopy::utils::Profiler([&]() {
         // Initialize result to zero
@@ -364,53 +342,110 @@ int main() {
             auto acc = result_buf.get_access<cl::sycl::access::mode::discard_write>();
             acc[0] = 0;
         }
+        // Define work-group and sub-group sizes based on hardware capabilities
+        const size_t sub_group_size = 32;    // From your hardware info
+        const size_t work_group_size = 256;  // Multiple of sub-group size and divides max work-group size
+        const size_t num_compute_units = dev.get_info<cl::sycl::info::device::max_compute_units>(); // From your hardware info
 
-        // Accessors outside the loop for efficiency
-        auto F_acc = F_buf.get_access<cl::sycl::access::mode::read>();
-        auto sampled_x_acc = sampled_x_buf.get_access<cl::sycl::access::mode::read>();
-        auto result_acc = result_buf.get_access<cl::sycl::access::mode::read_write>();
+        // Calculate number of work-groups to match the number of compute units
+        const size_t num_work_groups = num_compute_units;
+        std::cout<<"num_work_groups: "<<num_compute_units<<std::endl;
+        // Adjust global range accordingly
+        const size_t global_range = num_work_groups * work_group_size;
 
-        // Process data in blocks to fit within hardware constraints
-        for (size_t pb = 0; pb < num_product_blocks; ++pb) {
-            for (size_t sb = 0; sb < num_sample_blocks; ++sb) {
-                const size_t product_offset = pb * product_block_size;
-                const size_t sample_offset = sb * sample_block_size;
+        // Calculate samples per work-item
+        const size_t total_work_items = global_range;
+        std::cout<<"total_work_items: "<<total_work_items<<std::endl;
+        const size_t samples_per_work_item = (num_samples + total_work_items - 1) / total_work_items;
+        std::cout<<"samples_per_work_item: "<<samples_per_work_item<<std::endl;
+        // Divide F_size among work-groups
+        const size_t F_per_group = (F_size + num_work_groups - 1) / num_work_groups;
 
-                const size_t current_product_block_size = std::min(product_block_size, F_size - product_offset);
-                const size_t current_sample_block_size = std::min(sample_block_size, num_samples - sample_offset);
+        std::cout<<"F_per_group: "<<F_per_group<<std::endl;
 
-                cl::sycl::range<2> global_range(current_product_block_size, current_sample_block_size);
-                cl::sycl::range<2> local_range(current_product_block_size, 1);  // Optimize local range
+        queue.submit([&](cl::sycl::handler &cgh) {
+            auto F_acc = F_buf.get_access<cl::sycl::access::mode::read>(cgh);
+            auto sampled_x_acc = sampled_x_buf.get_access<cl::sycl::access::mode::read>(cgh);
+            auto result_acc = result_buf.get_access<cl::sycl::access::mode::read_write>(cgh);
 
-                queue.submit([&](cl::sycl::handler &cgh) {
-                    // Local accessors (optional, for local memory optimization)
-                    // cl::sycl::accessor<bit_vector_type, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::local> local_F(product_block_size, cgh);
-                    // cl::sycl::accessor<bit_vector_type, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::local> local_samples(sample_block_size, cgh);
+            // Local memory for storing a chunk of F
+            cl::sycl::local_accessor<bit_vector_type, 1> local_F(F_per_group, cgh);
 
-                    cgh.parallel_for<class sample_eval_kernel>(
-                            cl::sycl::nd_range<2>(global_range, local_range),
-                            [=](cl::sycl::nd_item<2> item) {
-                                const size_t product_idx = item.get_global_id(0) + product_offset;
-                                const size_t sample_idx = item.get_global_id(1) + sample_offset;
+            cgh.parallel_for<class sample_eval_kernel>(
+                    cl::sycl::nd_range<1>(cl::sycl::range<1>(global_range), cl::sycl::range<1>(work_group_size)),
+                    [=](cl::sycl::nd_item<1> item) {
+                        size_t global_id = item.get_global_linear_id();
+                        size_t local_id = item.get_local_linear_id();
+                        size_t group_id = item.get_group_linear_id();
 
-                                if (product_idx < F_size && sample_idx < num_samples) {
-                                    const auto sample = sampled_x_acc[sample_idx];
-                                    const auto product = F_acc[product_idx];
+                        // Each work-group loads its portion of F into local memory
+                        size_t F_start = group_id * F_per_group;
+                        size_t F_end = cl::sycl::min(F_start + F_per_group, F_size);
+                        size_t F_chunk_size = F_end - F_start;
 
-                                    // Evaluate F
-                                    if ((sample | product) == 0b11111111) {
-                                        // Atomic increment the tally
-                                        cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
-                                                cl::sycl::memory_scope::device,
-                                                cl::sycl::access::address_space::global_space>
-                                                count_atomic(result_acc[0]);
-                                        count_atomic.fetch_add(1);
-                                    }
+                        // Load F into local memory in a parallel fashion
+                        for (size_t i = local_id; i < F_chunk_size; i += work_group_size) {
+                            local_F[i] = F_acc[F_start + i];
+                        }
+
+                        // Synchronize to ensure all local_F is loaded
+                        item.barrier(cl::sycl::access::fence_space::local_space);
+
+                        // Each work-item processes multiple samples
+                        size_t sample_start = global_id * samples_per_work_item;
+                        size_t sample_end = cl::sycl::min(sample_start + samples_per_work_item, num_samples);
+
+                        int local_count = 0;
+
+                        for (size_t i = sample_start; i < sample_end; ++i) {
+                            if (i >= num_samples) break; // Guard against overrun
+
+                            const auto sample = sampled_x_acc[i];
+                            bool sample_satisfies_F = false;
+
+                            // Evaluate F over the chunk
+                            for (size_t j = 0; j < F_chunk_size; ++j) {
+                                if ((sample | local_F[j]) == 0b11111111) {
+                                    sample_satisfies_F = true;
+                                    break; // Early exit
                                 }
-                            });
-                });
-            }
-        }
+                            }
+
+                            if (sample_satisfies_F) {
+                                local_count += 1;
+                            }
+                        }
+
+                        // Reduce local counts within the work-group
+                        // Use local memory for reduction
+                        cl::sycl::local_accessor<int, 1> local_sums;
+
+                        // Initialize local sum
+                        if (local_id == 0) {
+                            local_sums[0] = 0;
+                        }
+
+                        item.barrier(cl::sycl::access::fence_space::local_space);
+
+                        // Atomic add local count to local sum
+                        cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
+                                cl::sycl::memory_scope::work_group,
+                                cl::sycl::access::address_space::local_space>
+                                local_sum_atomic(local_sums[0]);
+                        local_sum_atomic.fetch_add(local_count);
+
+                        item.barrier(cl::sycl::access::fence_space::local_space);
+
+                        // Work-group leader updates the global result
+                        if (local_id == 0) {
+                            cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
+                                    cl::sycl::memory_scope::device,
+                                    cl::sycl::access::address_space::global_space>
+                                    result_atomic(result_acc[0]);
+                            result_atomic.fetch_add(local_sums[0]);
+                        }
+                    });
+        });
         queue.wait_and_throw();
     }, 1, 0, "Optimized evaluation of F with blocking").run();
     // Retrieve result
