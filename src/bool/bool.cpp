@@ -92,7 +92,7 @@ static const constexpr known_event_probabilities Px = {
  *
  * @note num_samples = 10,000,000 (i.e., 1e7)
  */
-static constexpr const size_t num_samples = 1e9;
+static constexpr const size_t num_samples = 1e8;
 
 /**
  * @brief Initializes the global array `F` with encoded product terms of expression F.
@@ -343,10 +343,10 @@ int main() {
     std::cout<<"max_work_item_size: "<<max_work_item_size<<std::endl;
     const size_t work_group_size = dev.get_info<cl::sycl::info::device::max_work_group_size>();  // Multiple of sub-group size and divides max work-group size
     std::cout<<"max_work_group_size: "<<work_group_size<<std::endl;
-    const size_t num_compute_units = 49 * dev.get_info<cl::sycl::info::device::max_compute_units>(); // From your hardware info
+    const size_t num_compute_units = dev.get_info<cl::sycl::info::device::max_compute_units>(); // From your hardware info
 
     // Calculate number of work-groups to match the number of compute units
-    const size_t num_work_groups = num_compute_units;
+    const size_t num_work_groups = 49 * num_compute_units;
     std::cout<<"num_work_groups: "<<num_work_groups<<std::endl;
     // Adjust global range accordingly
     const size_t global_range = num_work_groups * work_group_size;
@@ -403,22 +403,18 @@ int main() {
                         long local_count = 0;
 
                         for (size_t i = sample_start; i < sample_end; ++i) {
-                            if (i >= num_samples) break; // Guard against overrun
+                            //if (i >= num_samples) break; // Guard against overrun
 
                             const auto sample = sampled_x_acc[i];
-                            bool sample_satisfies_F = false;
+                            long sample_satisfies_F = 0;
 
                             // Evaluate F over the chunk
                             for (size_t j = 0; j < F_chunk_size; ++j) {
-                                if ((sample | local_F[j]) == 0b11111111) {
-                                    sample_satisfies_F = true;
-                                    break; // Early exit
-                                }
+                                const bool all_true = ((sample | F_acc[j]) == 0b11111111);
+                                sample_satisfies_F = sample_satisfies_F || all_true;
                             }
 
-                            if (sample_satisfies_F) {
-                                local_count += 1;
-                            }
+                            local_count += sample_satisfies_F;
                         }
 
                         // Reduce local counts within the work-group
