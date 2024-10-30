@@ -79,6 +79,18 @@ void DeviceInfo::print_compute_info(std::ostream& os) const {
         }
         os << "\n";
 
+        os << "  Max-Num Sub-Groups: " << device_.get_info<cl::sycl::info::device::max_num_sub_groups>() << "\n";
+
+        auto sub_group_sizes = device_.get_info<cl::sycl::info::device::sub_group_sizes>();
+        os << "  Sub-group Sizes: ";
+        for (const auto& size : sub_group_sizes) {
+            os << size << " ";
+        }
+        os << std::endl;
+        os << "  Sub-group Independent Forward Progress: " << std::boolalpha
+           << device_.get_info<cl::sycl::info::device::sub_group_independent_forward_progress>() << "\n";
+
+
         os << "  Max Work Group Size: " << device_.get_info<cl::sycl::info::device::max_work_group_size>() << "\n";
         os << "  Preferred Vector Widths:\n";
         os << "    char: " << device_.get_info<cl::sycl::info::device::preferred_vector_width_char>() << "\n";
@@ -105,14 +117,6 @@ void DeviceInfo::print_compute_info(std::ostream& os) const {
         os << "  Mem Base Address Align: " << device_.get_info<cl::sycl::info::device::mem_base_addr_align>() << " bits\n";
         os << "  Profiling Timer Resolution: " << device_.get_info<cl::sycl::info::device::profiling_timer_resolution>() << "\n";
         os << "  Endian Little: " << std::boolalpha << device_.get_info<cl::sycl::info::device::is_endian_little>() << "\n";
-        os << "  Sub-group Independent Forward Progress: " << std::boolalpha
-           << device_.get_info<cl::sycl::info::device::sub_group_independent_forward_progress>() << "\n";
-
-        auto sub_group_sizes = device_.get_info<cl::sycl::info::device::sub_group_sizes>();
-        os << "  Sub-group Sizes: ";
-        for (const auto& size : sub_group_sizes) {
-            os << size << " ";
-        }
         os << "\n";
 
     } catch (const cl::sycl::exception& e) {

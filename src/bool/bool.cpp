@@ -92,7 +92,7 @@ static const constexpr known_event_probabilities Px = {
  *
  * @note num_samples = 10,000,000 (i.e., 1e7)
  */
-static constexpr const size_t num_samples = 1e7;
+static constexpr const size_t num_samples = 1e9;
 
 /**
  * @brief Initializes the global array `F` with encoded product terms of expression F.
@@ -267,7 +267,7 @@ static constexpr float_type compute_exact_prob_F(const known_event_probabilities
  */
 static void sample_and_assign_truth_values(const known_event_probabilities &to_sample_from, std::vector<bit_vector_type> &sampled_x, const std::size_t seed = 372) {
     // Parallelize the sampling using OpenMP
-    #pragma omp parallel num_threads(1) default(none) shared(seed, to_sample_from, sampled_x)
+    #pragma omp parallel num_threads(32) default(none) shared(seed, to_sample_from, sampled_x)
     {
         // Each thread creates its own random number generator and distribution
         int thread_num = omp_get_thread_num();
@@ -334,7 +334,32 @@ int main() {
 
     cl::sycl::buffer<bit_vector_type, 1> F_buf(F.data(), cl::sycl::range<1>(F_size));
     cl::sycl::buffer<bit_vector_type, 1> sampled_x_buf(sampled_x.data(), cl::sycl::range<1>(sampled_x.size()));
-    cl::sycl::buffer<int, 1> result_buf(cl::sycl::range<1>(1));
+    cl::sycl::buffer<long, 1> result_buf(cl::sycl::range<1>(1));
+
+    // Define work-group and sub-group sizes based on hardware capabilities
+    const size_t sub_group_size = dev.get_info<cl::sycl::info::device::max_num_sub_groups>();
+    std::cout<<"sub_group_size: "<<sub_group_size<<std::endl;
+    const size_t max_work_item_size = dev.get_info<cl::sycl::info::device::max_work_item_sizes<1>>()[0];
+    std::cout<<"max_work_item_size: "<<max_work_item_size<<std::endl;
+    const size_t work_group_size = dev.get_info<cl::sycl::info::device::max_work_group_size>();  // Multiple of sub-group size and divides max work-group size
+    std::cout<<"max_work_group_size: "<<work_group_size<<std::endl;
+    const size_t num_compute_units = 49 * dev.get_info<cl::sycl::info::device::max_compute_units>(); // From your hardware info
+
+    // Calculate number of work-groups to match the number of compute units
+    const size_t num_work_groups = num_compute_units;
+    std::cout<<"num_work_groups: "<<num_work_groups<<std::endl;
+    // Adjust global range accordingly
+    const size_t global_range = num_work_groups * work_group_size;
+
+    // Calculate samples per work-item
+    const size_t total_work_items = global_range;
+    std::cout<<"total_work_items: "<<total_work_items<<std::endl;
+    const size_t samples_per_work_item = (num_samples + total_work_items - 1) / total_work_items;
+    std::cout<<"samples_per_work_item: "<<samples_per_work_item<<std::endl;
+    // Divide F_size among work-groups
+    const size_t F_per_group = (F_size + num_work_groups - 1) / num_work_groups;
+
+    std::cout<<"F_per_group: "<<F_per_group<<std::endl;
 
     const auto profiler = canopy::utils::Profiler([&]() {
         // Initialize result to zero
@@ -342,26 +367,6 @@ int main() {
             auto acc = result_buf.get_access<cl::sycl::access::mode::discard_write>();
             acc[0] = 0;
         }
-        // Define work-group and sub-group sizes based on hardware capabilities
-        const size_t sub_group_size = 32;    // From your hardware info
-        const size_t work_group_size = 256;  // Multiple of sub-group size and divides max work-group size
-        const size_t num_compute_units = dev.get_info<cl::sycl::info::device::max_compute_units>(); // From your hardware info
-
-        // Calculate number of work-groups to match the number of compute units
-        const size_t num_work_groups = num_compute_units;
-        std::cout<<"num_work_groups: "<<num_compute_units<<std::endl;
-        // Adjust global range accordingly
-        const size_t global_range = num_work_groups * work_group_size;
-
-        // Calculate samples per work-item
-        const size_t total_work_items = global_range;
-        std::cout<<"total_work_items: "<<total_work_items<<std::endl;
-        const size_t samples_per_work_item = (num_samples + total_work_items - 1) / total_work_items;
-        std::cout<<"samples_per_work_item: "<<samples_per_work_item<<std::endl;
-        // Divide F_size among work-groups
-        const size_t F_per_group = (F_size + num_work_groups - 1) / num_work_groups;
-
-        std::cout<<"F_per_group: "<<F_per_group<<std::endl;
 
         queue.submit([&](cl::sycl::handler &cgh) {
             auto F_acc = F_buf.get_access<cl::sycl::access::mode::read>(cgh);
@@ -395,7 +400,7 @@ int main() {
                         size_t sample_start = global_id * samples_per_work_item;
                         size_t sample_end = cl::sycl::min(sample_start + samples_per_work_item, num_samples);
 
-                        int local_count = 0;
+                        long local_count = 0;
 
                         for (size_t i = sample_start; i < sample_end; ++i) {
                             if (i >= num_samples) break; // Guard against overrun
@@ -418,7 +423,7 @@ int main() {
 
                         // Reduce local counts within the work-group
                         // Use local memory for reduction
-                        cl::sycl::local_accessor<int, 1> local_sums;
+                        cl::sycl::local_accessor<long, 1> local_sums;
 
                         // Initialize local sum
                         if (local_id == 0) {
@@ -428,7 +433,7 @@ int main() {
                         item.barrier(cl::sycl::access::fence_space::local_space);
 
                         // Atomic add local count to local sum
-                        cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
+                        cl::sycl::atomic_ref<long, cl::sycl::memory_order::relaxed,
                                 cl::sycl::memory_scope::work_group,
                                 cl::sycl::access::address_space::local_space>
                                 local_sum_atomic(local_sums[0]);
@@ -438,7 +443,7 @@ int main() {
 
                         // Work-group leader updates the global result
                         if (local_id == 0) {
-                            cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
+                            cl::sycl::atomic_ref<long, cl::sycl::memory_order::relaxed,
                                     cl::sycl::memory_scope::device,
                                     cl::sycl::access::address_space::global_space>
                                     result_atomic(result_acc[0]);
@@ -447,7 +452,7 @@ int main() {
                     });
         });
         queue.wait_and_throw();
-    }, 1, 0, "Optimized evaluation of F with blocking").run();
+    }, 5, 0, "Optimized evaluation of F with blocking").run();
     // Retrieve result
     size_t count = 0;
     {
