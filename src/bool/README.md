@@ -41,6 +41,242 @@ Process finished with exit code 0
 ```
 
 ```shell
+Device Information:
+General Information:
+  Device Name: NVIDIA GeForce GTX 1660 SUPER
+  Vendor Name: NVIDIA
+  Driver Version: 12040
+  Profile: FULL_PROFILE
+  Version: sm_75
+  OpenCL C Version: 1.2 HIPSYCL
+  Device Type: GPU
+  Vendor ID: 4318
+  Platform: CUDA
+  Is Available: true
+  Is Compiler Available: true
+  Is Linker Available: true
+  Reference Count: 1
+  Available Extensions:
+
+Compute Unit Information:
+  Max Compute Units: 22
+  Max Work Item Dimensions: 3
+  Max Work Item Sizes: 64 1024 1024 
+  Max Work Group Size: 1024
+  Preferred Vector Widths:
+    char: 4
+    short: 2
+    int: 1
+    long: 1
+    float: 1
+    double: 1
+    half: 2
+  Native Vector Widths:
+    char: 4
+    short: 2
+    int: 1
+    long: 1
+    float: 1
+    double: 1
+    half: 2
+  Max Clock Frequency: 1785 MHz
+  Address Bits: 64
+  Max Samplers: 0
+  Max Parameter Size: 18446744073709551615
+  Mem Base Address Align: 8 bits
+  Profiling Timer Resolution: 1
+  Endian Little: true
+  Sub-group Independent Forward Progress: true
+  Sub-group Sizes: 32 
+
+Memory Information:
+  Global Memory Size: 5929 MB
+  Max Memory Allocation Size: 5929 MB
+  Local Memory Size: 48 KB
+  Local Memory Type: local
+  Error Correction Support: false
+  Host Unified Memory: false
+  Global Memory Cache Type: read_write
+  Global Memory Cache Line Size: 128
+  Global Memory Cache Size: 1536 KB
+  Max Constant Buffer Size: 64 KB
+  Max Constant Args: 4294967295
+  Printf Buffer Size: 18446744073709551615
+  Preferred Interop User Sync: true
+
+Image Support Information:
+  Image Support: false
+
+Floating Point Configurations:
+  Half Precision FP Configurations:
+    denorm
+    inf_nan
+    round_to_nearest
+    round_to_zero
+    round_to_inf
+    fma
+    correctly_rounded_divide_sqrt
+  Single Precision FP Configurations:
+    denorm
+    inf_nan
+    round_to_nearest
+    round_to_zero
+    round_to_inf
+    fma
+    correctly_rounded_divide_sqrt
+  Double Precision FP Configurations:
+    denorm
+    inf_nan
+    round_to_nearest
+    round_to_zero
+    round_to_inf
+    fma
+    correctly_rounded_divide_sqrt
+
+Execution Capabilities:
+  exec_kernel
+  Queue Profiling: true
+  Built-in Kernels:
+
+Partition Information:
+  Partition Max Sub-devices: 0
+  Partition Properties:
+  Partition Affinity Domains:
+    not_applicable
+  Partition Type Property: no_partition
+  Partition Type Affinity Domain: not_applicable
+
+Aspects Supported:
+  gpu
+  accelerator
+  fp64
+  atomic64
+  queue_profiling
+  usm_device_allocations
+  usm_host_allocations
+  usm_shared_allocations
+
+Other Information:
+  [Error retrieving other information: Device is not a subdevice]
+```
+
+```shell
+Device Information:
+General Information:
+  Device Name: Intel(R) UHD Graphics 630
+  Vendor Name: Intel(R) UHD Graphics 630
+  Driver Version: 24.35.30872.22
+  Profile: FULL_PROFILE
+  Version: OpenCL OpenCL C 1.2 
+  OpenCL C Version: 1.2 HIPSYCL
+  Device Type: GPU
+  Vendor ID: 32902
+  Platform: OpenCL
+  Is Available: true
+  Is Compiler Available: true
+  Is Linker Available: true
+  Reference Count: 1
+  Available Extensions:
+
+Compute Unit Information:
+  Max Compute Units: 24
+  Max Work Item Dimensions: 3
+  Max Work Item Sizes: 256 256 256 
+  Max Work Group Size: 256
+  Preferred Vector Widths:
+    char: 16
+    short: 8
+    int: 4
+    long: 1
+    float: 1
+    double: 1
+    half: 8
+  Native Vector Widths:
+    char: 16
+    short: 8
+    int: 4
+    long: 1
+    float: 1
+    double: 1
+    half: 8
+  Max Clock Frequency: 1200 MHz
+  Address Bits: 64
+  Max Samplers: 0
+  Max Parameter Size: 2048
+  Mem Base Address Align: 1024 bits
+  Profiling Timer Resolution: 1
+  Endian Little: true
+  Sub-group Independent Forward Progress: true
+  Sub-group Sizes: 1 2 4 8 16 32 64 128 
+
+Memory Information:
+  Global Memory Size: 29474 MB
+  Max Memory Allocation Size: 4095 MB
+  Local Memory Size: 64 KB
+  Local Memory Type: local
+  Error Correction Support: false
+  Host Unified Memory: false
+  Global Memory Cache Type: read_only
+  Global Memory Cache Line Size: 64
+  Global Memory Cache Size: 768 KB
+  Max Constant Buffer Size: 4194296 KB
+  Max Constant Args: 8
+  Printf Buffer Size: 4194304
+  Preferred Interop User Sync: true
+
+Image Support Information:
+  Image Support: false
+
+Floating Point Configurations:
+  Half Precision FP Configurations:
+    denorm
+    inf_nan
+    round_to_nearest
+    round_to_zero
+    round_to_inf
+    fma
+    correctly_rounded_divide_sqrt
+  Single Precision FP Configurations:
+    denorm
+    inf_nan
+    round_to_nearest
+    round_to_zero
+    round_to_inf
+    fma
+    correctly_rounded_divide_sqrt
+  Double Precision FP Configurations:
+    denorm
+    inf_nan
+    round_to_nearest
+    round_to_zero
+    round_to_inf
+    fma
+    correctly_rounded_divide_sqrt
+
+Execution Capabilities:
+  exec_kernel
+  Queue Profiling: false
+  Built-in Kernels:
+
+Partition Information:
+  Partition Max Sub-devices: 0
+  Partition Properties:
+  Partition Affinity Domains:
+    not_applicable
+  Partition Type Property: no_partition
+  Partition Type Affinity Domain: not_applicable
+
+Aspects Supported:
+  gpu
+  accelerator
+  fp64
+  atomic64
+  usm_device_allocations
+  usm_host_allocations
+  usm_atomic_host_allocations
+  usm_shared_allocations
+```
+```shell
 /tmp/tmp.xQ8wveOZzU/cmake-build-release/src/bool/bool_et
 M1 = 
 [   0.84000   0.16000 ]

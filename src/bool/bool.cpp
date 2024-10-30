@@ -9,6 +9,7 @@
 #include "utils/stats.h"
 #include "utils/bits.h"
 #include "utils/types.h"
+#include "utils/device_info.h"
 
 /**
  * @brief Number of unique symbols (variables) in expression F.
@@ -332,6 +333,31 @@ int main() {
     cl::sycl::buffer<bit_vector_type, 1> sampled_x_buf(sampled_x.data(), cl::sycl::range<1>(sampled_x.size()));
     cl::sycl::buffer<int, 1> result_buf(cl::sycl::range<1>(1));
 
+    std::cout<<DeviceInfo(queue.get_device());
+
+    /**
+     * @brief Compute Optimal Work Group Sizes
+     *
+     * Based on the hardware information:
+     * - Max Compute Units: 22
+     * - Max Work Item Sizes: 64, 1024, 1024
+     * - Max Work Group Size: 1024
+     *
+     * We'll split the work such that it optimally utilizes the compute units.
+     * We'll process the data in chunks of samples and products to fit within the hardware constraints.
+     */
+    const size_t max_work_items_dim0 = 64;
+    const size_t max_work_items_dim1 = 1024;
+    const size_t max_work_group_size = 1024;
+
+    // Define block sizes for products and samples
+    const size_t product_block_size = max_work_items_dim0;   // 64
+    const size_t sample_block_size = max_work_items_dim1;    // 1024
+
+    // Calculate the number of blocks needed
+    const size_t num_product_blocks = (F_size + product_block_size - 1) / product_block_size;
+    const size_t num_sample_blocks = (num_samples + sample_block_size - 1) / sample_block_size;
+
     const auto profiler = canopy::utils::Profiler([&]() {
         // Initialize result to zero
         {
@@ -339,116 +365,54 @@ int main() {
             acc[0] = 0;
         }
 
-        queue.submit([&](cl::sycl::handler& cgh) {
-            auto F_acc = F_buf.get_access<cl::sycl::access::mode::read>(cgh);
-            auto sampled_x_acc = sampled_x_buf.get_access<cl::sycl::access::mode::read>(cgh);
-            auto result_acc = result_buf.get_access<cl::sycl::access::mode::read_write>(cgh);
+        // Accessors outside the loop for efficiency
+        auto F_acc = F_buf.get_access<cl::sycl::access::mode::read>();
+        auto sampled_x_acc = sampled_x_buf.get_access<cl::sycl::access::mode::read>();
+        auto result_acc = result_buf.get_access<cl::sycl::access::mode::read_write>();
 
-            cgh.parallel_for<class sample_eval_kernel>(cl::sycl::range<1>(num_samples), [=](cl::sycl::id<1> idx) {
-                const size_t i = idx[0];
-                const auto sample = sampled_x_acc[i];
+        // Process data in blocks to fit within hardware constraints
+        for (size_t pb = 0; pb < num_product_blocks; ++pb) {
+            for (size_t sb = 0; sb < num_sample_blocks; ++sb) {
+                const size_t product_offset = pb * product_block_size;
+                const size_t sample_offset = sb * sample_block_size;
 
-                // Evaluate F
-                // the index-based iterator performs about ~15%-20% faster on nvidia gpus
-                // hence, commenting out the reference-based accessor / iterator
-                //for (const bit_vector_type &product : F_acc) {
-                for (auto j = 0; j < F_size; j++) {
-                    /**
-                     * @note todo: [optimization]
-                     * - confirm that any_of will yield and terminate the calculation as soon as any row evals to true.
-                     * - confirm that any_of does not enforce any execution order for which rows are evaluated first.
-                     * - together, these two constraints can leverage faster out-of-order, pre-emptive execution
-                     * - ensure that this intent is communicated/articulated in the sycl kernels or stl functions
-                    **/
-                    if ((sample | F_acc[j]) == 0b11111111) {
-                    //if ((sample | product) == 0b11111111) {
-                        // Atomic increment the tally and exit
-                        cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed, cl::sycl::memory_scope::device,
-                                cl::sycl::access::address_space::global_space>
-                                count_atomic(result_acc[0]);
-                        count_atomic.fetch_add(1);
-                        break; // Early exit
-                    }
-                }
+                const size_t current_product_block_size = std::min(product_block_size, F_size - product_offset);
+                const size_t current_sample_block_size = std::min(sample_block_size, num_samples - sample_offset);
 
-            /**
-             * @brief Implicants / Products
-             * -----------
-             * A product (F_acc[j]) is an implicant for F if ANY assignment (sample_x[i] | F_acc[j]) evals to 0b11111111.
-             * This is because in the SOP representation, any product evaluating to ⊤ will make F ⊤. This because
-             * F, as defined, is in SOP form. So, for F in the form F = p1 + p2 + p3, if any product p evals to ⊤,
-             * F evals to ⊤. You can think of operations in (sample_x[i] | F_acc[j]) as the AND-PLANE in an AND-OR
-             * PLA (programmable logic array).
-             *
-             * We expect that a well-formed product will be an implicant. What do I mean by well-formed?
-             *  (1) no mutually exclusive events i.e. aa'
-             *  (2) no always empty events: abcd, where d was not part of X, so it never gets a truth assignment
-             *
-             * So what's left now are products that take at-least *some* input from the sampling vector X, which
-             * makes the product evaluate to ⊤. of course, during sampling, we might not have encountered such an
-             * input, *yet*.
-             *
-             * In a more straight forward sense, the assignment for X that makes any product ⊤ is the definition
-             * of the product itself, i.e. a product a'b'c evals to ⊤ when a=⊥, b=⊥, c=⊤. This is what product is.
-             **/
+                cl::sycl::range<2> global_range(current_product_block_size, current_sample_block_size);
+                cl::sycl::range<2> local_range(current_product_block_size, 1);  // Optimize local range
 
-             /**
-             * @brief Prime Implicants
-             * -----------------
-             * A prime implicant is an implicant that cannot be further reduced by removing any literals without
-             * ceasing to be an implicant. That is, it is a minimal implicant in terms of the number of literals.
-             *
-             * In the function F(a, b) = ab + a'c,
-             *
-             *     - The product term **P = ab** is a prime implicant; removing any literal (either **a** or **b**)
-             *       results in a term that is not an implicant of F because it would evaluate to true in cases where F
-             *       is false.
-             *
-             *     - However, the term **abc** is not a prime implicant because it can be reduced to **ab**
-             *       (by eliminating **c**) while still being an implicant of F. Therefore, **abc** is not minimal and
-             *       thus not prime.
-             **/
+                queue.submit([&](cl::sycl::handler &cgh) {
+                    // Local accessors (optional, for local memory optimization)
+                    // cl::sycl::accessor<bit_vector_type, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::local> local_F(product_block_size, cgh);
+                    // cl::sycl::accessor<bit_vector_type, 1, cl::sycl::access::mode::read_write, cl::sycl::access::target::local> local_samples(sample_block_size, cgh);
 
-             /**
-             * @brief Essential Prime Implicants
-             * ---------------------------
-             * A prime implicant is `essential` if there exists an assignment X for that prime implicant that makes
-             * F eval to ⊤ while all other products make F eval to ⊥ for that assignment. In other words, An
-             * essential prime implicant is a prime implicant that covers at least one minterm (truth-table row
-             * where the function evaluates to true) that is not covered by any other prime implicant. The key is
-             * that there are outputs that only this prime implicant can account for.
-             *
-             * In other words, an essential prime implicant is a prime implicant that covers at least one minterm
-             * (a combination of variable assignments where F is true) that is not covered by any other prime implicant.
-             * These minterms are exclusively covered by this prime implicant.
-             *
-             * Consider F(a, b, c) with the truth table where F is true for minterms m1, m2, and m5.
-             *      Let:
-             *          - **P1** be a prime implicant covering minterms m1 and m5.
-             *          - **P2** be a prime implicant covering minterms m2 and m5.
-             *
-             *      Minterm m1 is only covered by **P1**, so **P1** is an essential prime implicant.
-             *      Minterm m2 is only covered by **P2**, so **P2** is also an essential prime implicant.
-             *      Minterm m5 is covered by both **P1** and **P2**, so it does not affect the essentiality of either implicant.
-             **/
+                    cgh.parallel_for<class sample_eval_kernel>(
+                            cl::sycl::nd_range<2>(global_range, local_range),
+                            [=](cl::sycl::nd_item<2> item) {
+                                const size_t product_idx = item.get_global_id(0) + product_offset;
+                                const size_t sample_idx = item.get_global_id(1) + sample_offset;
 
-             /**
-             * @brief Minimal Sum-of-Products (SoP
-             * ------------------------
-             *
-             * Every minimal SoP consists of a sum of prime implicants. This does not imply that a minimal SoP
-             * contains *all* prime implicants. Rather, a minimal SoP contains *all* essential prime implicants, but
-             * it may also contain non-essential prime implicants.
-             *
-             * Therefore, A minimal SoP expression for F is an expression that represents F using the
-             * fewest possible product terms (and thus the fewest literals). It consists of all essential prime
-             * implicants and, if necessary, additional prime implicants to cover all minterms where F is true.
-             **/
-            });
-        });
+                                if (product_idx < F_size && sample_idx < num_samples) {
+                                    const auto sample = sampled_x_acc[sample_idx];
+                                    const auto product = F_acc[product_idx];
+
+                                    // Evaluate F
+                                    if ((sample | product) == 0b11111111) {
+                                        // Atomic increment the tally
+                                        cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed,
+                                                cl::sycl::memory_scope::device,
+                                                cl::sycl::access::address_space::global_space>
+                                                count_atomic(result_acc[0]);
+                                        count_atomic.fetch_add(1);
+                                    }
+                                }
+                            });
+                });
+            }
+        }
         queue.wait_and_throw();
-    }, 1, 0, "F=ab'c+a'b+bc', x=3, term<width>=uint_fast8_t, products=1e6, samples=1e7").run();
-
+    }, 1, 0, "Optimized evaluation of F with blocking").run();
     // Retrieve result
     size_t count = 0;
     {

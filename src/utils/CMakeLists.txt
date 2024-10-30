@@ -5,6 +5,7 @@ set(UTILS_HEADERS
         stopwatch.h
         bits.h
         types.h
+        device_info.h
 )
 
 set(UTILS_SOURCES
