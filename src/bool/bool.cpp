@@ -92,7 +92,7 @@ static const constexpr known_event_probabilities Px = {
  *
  * @note num_samples = 10,000,000 (i.e., 1e7)
  */
-static constexpr const size_t num_samples = 1e8;
+static constexpr const size_t num_samples = 1e9;
 
 /**
  * @brief Initializes the global array `F` with encoded product terms of expression F.
@@ -267,7 +267,7 @@ static constexpr float_type compute_exact_prob_F(const known_event_probabilities
  */
 static void sample_and_assign_truth_values(const known_event_probabilities &to_sample_from, std::vector<bit_vector_type> &sampled_x, const std::size_t seed = 372) {
     // Parallelize the sampling using OpenMP
-    #pragma omp parallel num_threads(32) default(none) shared(seed, to_sample_from, sampled_x)
+    #pragma omp parallel num_threads(16) default(none) shared(seed, to_sample_from, sampled_x)
     {
         // Each thread creates its own random number generator and distribution
         int thread_num = omp_get_thread_num();
@@ -394,7 +394,7 @@ int main() {
                         }
 
                         // Synchronize to ensure all local_F is loaded
-                        item.barrier(cl::sycl::access::fence_space::local_space);
+                       item.barrier(cl::sycl::access::fence_space::local_space);
 
                         // Each work-item processes multiple samples
                         size_t sample_start = global_id * samples_per_work_item;
@@ -410,7 +410,7 @@ int main() {
 
                             // Evaluate F over the chunk
                             for (size_t j = 0; j < F_chunk_size; ++j) {
-                                const bool all_true = ((sample | F_acc[j]) == 0b11111111);
+                                const bool all_true = ((sample | local_F[j]) == 0b11111111);
                                 sample_satisfies_F = sample_satisfies_F || all_true;
                             }
 
