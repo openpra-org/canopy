@@ -1,6 +1,6 @@
 set(Boost_USE_STATIC_LIBS OFF)
 
-set(TEST_BITWISE_SOURCES
+set(TEST_BOOL_SOURCES
         test_bitwise.cpp
         bar_tests.cpp
         bit_ops_tests.cpp
@@ -17,14 +17,14 @@ include_directories("../../src")
 add_definitions(-DBOOST_TEST_DYN_LINK)
 
 # Add the test executable
-add_executable(test_bitwise ${TEST_BITWISE_SOURCES})
+add_executable(test_bool ${TEST_BOOL_SOURCES})
 
 # Link against the Boost Test library and the project's settings library
-target_link_libraries(test_bitwise
+target_link_libraries(test_bool
         ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-        bitwise
+        bool
 )
 
 # Enable testing with CTest
 enable_testing()
-add_test(NAME BitwiseTests COMMAND test_bitwise)
+add_test(NAME BoolTests COMMAND test_bool)
