@@ -47,6 +47,7 @@ if(NOT _boost_FOUND)
     endif()
 
     find_package(Boost 1.74.0 REQUIRED)
+    find_package(Boost 1.74.0 COMPONENTS unit_test_framework REQUIRED)
 
     if(Boost_FOUND)
         set(_boost_FOUND TRUE BOOL "Flag to indicate that Boost has been configured using this module")

@@ -1,9 +1,10 @@
-#include <iostream>
-#include <vector>
-#include <numeric>
-#include <iomanip>
-#include <random>
+#include "compute.h"
+
 #include <CL/sycl.hpp>
+#include <iomanip>
+#include <iostream>
+#include <random>
+#include <vector>
 
 #include "utils/profiler.h"
 #include "utils/stats.h"
@@ -44,32 +45,6 @@ static constexpr const size_t n_duplicates = 200000;
 static constexpr const std::size_t F_size = m_products * n_duplicates;
 
 /**
- * @typedef known_event_probabilities
- * @brief Array type to store the known probabilities of events (variables).
- *
- * The size of the array is given by `s_symbols`.
- */
-using known_event_probabilities = std::array<tally_float_type, s_symbols>;
-
-/**
- * @brief Alias for an array of product terms.
- *
- * @tparam T The type of the elements (e.g., bit_vector_type).
- * @tparam size The number of elements in the array.
- */
-template<typename T, size_t size>
-using products = std::array<T, size>;
-
-/**
- * @brief Global array to store the encoded product terms of expression F.
- *
- * Declared as a static global array to give the compiler hints for compile-time optimizations.
- *
- * @note Investigate whether this has any meaningful performance implications.
- */
-static products<bit_vector_type, F_size> F;
-
-/**
  * @brief Known probabilities of the events (variables) a, b, c.
  *
  * @details Stored as an array of type `known_event_probabilities`.
@@ -81,7 +56,7 @@ static products<bit_vector_type, F_size> F;
  *
  * @note Probabilities of variables (events) in expression F.
  */
-static const constexpr known_event_probabilities Px = {
+static const known_event_probabilities Px = {
         1e-3, ///< P(a)
         1e-4, ///< P(b)
         1e-5  ///< P(c)
@@ -123,7 +98,6 @@ static constexpr const size_t num_samples = 1e9;
  *
  * The function duplicates the product terms multiple times to fill the array `F_`.
  *
- * @tparam size The size of the `products` array.
  * @param F_ Reference to the products array to initialize.
  * @param index The starting index in the array where the product terms should be placed.
  *
@@ -132,11 +106,11 @@ static constexpr const size_t num_samples = 1e9;
  * @example
  * @code
  * // Initialize the products array F
- * set_F<F_size>(F, 0);
+ * set_F(F, 0);
  * @endcode
  */
-template<size_t size>
-static inline void set_F(products<bit_vector_type, size> &F_, const size_t index) {
+template <template <typename, typename...> class Container = std::vector, typename bit_vector_type = uint_fast8_t, typename... Args>
+static void set_F(Container<bit_vector_type, Args...>& F_, const size_t index) {
     // first element: encodes ab'c
     // -------------------------------------------------
     // |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
@@ -265,9 +239,9 @@ static constexpr float_type compute_exact_prob_F(const known_event_probabilities
  * sample_and_assign_truth_values(Px, sampled_x);
  * @endcode
  */
-static void sample_and_assign_truth_values(const known_event_probabilities &to_sample_from, std::vector<bit_vector_type> &sampled_x, const std::size_t seed = 372) {
+static void sample_and_assign_truth_values(const known_event_probabilities &to_sample_from, symbols &sampled_x, const std::size_t seed = 372) {
     // Parallelize the sampling using OpenMP
-    #pragma omp parallel num_threads(16) default(none) shared(seed, to_sample_from, sampled_x)
+    #pragma omp parallel default(none) shared(seed, to_sample_from, sampled_x)
     {
         // Each thread creates its own random number generator and distribution
         int thread_num = omp_get_thread_num();
@@ -295,9 +269,12 @@ static void sample_and_assign_truth_values(const known_event_probabilities &to_s
  */
 int main() {
 
+    // store the encoded product terms of expression F.
+    products F(F_size);
+
     /// Sets the function and duplicates the products multiple times.
     for (auto i = 0; i < n_duplicates; i++) {
-        set_F<F_size>(F, i * m_products);
+        set_F(F, i * m_products);
     }
 
     /**
@@ -321,7 +298,7 @@ int main() {
      * generating random numbers inside the kernel is a valid one, and requires more work.
      */
     //canopy::bits8<num_samples> sampled_x;
-    std::vector<bit_vector_type> sampled_x(num_samples);
+    symbols sampled_x(num_samples);
 
     std::cout << canopy::utils::Profiler([&]() {
         sample_and_assign_truth_values(Px, sampled_x);
@@ -332,130 +309,11 @@ int main() {
     auto device_info = DeviceInfo(dev);
     std::cout<<device_info<<std::endl;
 
-    cl::sycl::buffer<bit_vector_type, 1> F_buf(F.data(), cl::sycl::range<1>(F_size));
-    cl::sycl::buffer<bit_vector_type, 1> sampled_x_buf(sampled_x.data(), cl::sycl::range<1>(sampled_x.size()));
-    cl::sycl::buffer<long, 1> result_buf(cl::sycl::range<1>(1));
-
-    // Define work-group and sub-group sizes based on hardware capabilities
-    const size_t sub_group_size = dev.get_info<cl::sycl::info::device::max_num_sub_groups>();
-    std::cout<<"sub_group_size: "<<sub_group_size<<std::endl;
-    const size_t max_work_item_size = dev.get_info<cl::sycl::info::device::max_work_item_sizes<1>>()[0];
-    std::cout<<"max_work_item_size: "<<max_work_item_size<<std::endl;
-    const size_t work_group_size = dev.get_info<cl::sycl::info::device::max_work_group_size>();  // Multiple of sub-group size and divides max work-group size
-    std::cout<<"max_work_group_size: "<<work_group_size<<std::endl;
-    const size_t num_compute_units = dev.get_info<cl::sycl::info::device::max_compute_units>(); // From your hardware info
-
-    // Calculate number of work-groups to match the number of compute units
-    const size_t num_work_groups = 49 * num_compute_units;
-    std::cout<<"num_work_groups: "<<num_work_groups<<std::endl;
-    // Adjust global range accordingly
-    const size_t global_range = num_work_groups * work_group_size;
-
-    // Calculate samples per work-item
-    const size_t total_work_items = global_range;
-    std::cout<<"total_work_items: "<<total_work_items<<std::endl;
-    const size_t samples_per_work_item = (num_samples + total_work_items - 1) / total_work_items;
-    std::cout<<"samples_per_work_item: "<<samples_per_work_item<<std::endl;
-    // Divide F_size among work-groups
-    const size_t F_per_group = (F_size + num_work_groups - 1) / num_work_groups;
-
-    std::cout<<"F_per_group: "<<F_per_group<<std::endl;
+    size_t count = 0;
 
     const auto profiler = canopy::utils::Profiler([&]() {
-        // Initialize result to zero
-        {
-            auto acc = result_buf.get_access<cl::sycl::access::mode::discard_write>();
-            acc[0] = 0;
-        }
-
-        queue.submit([&](cl::sycl::handler &cgh) {
-            auto F_acc = F_buf.get_access<cl::sycl::access::mode::read>(cgh);
-            auto sampled_x_acc = sampled_x_buf.get_access<cl::sycl::access::mode::read>(cgh);
-            auto result_acc = result_buf.get_access<cl::sycl::access::mode::read_write>(cgh);
-
-            // Local memory for storing a chunk of F
-            cl::sycl::local_accessor<bit_vector_type, 1> local_F(F_per_group, cgh);
-
-            cgh.parallel_for<class sample_eval_kernel>(
-                    cl::sycl::nd_range<1>(cl::sycl::range<1>(global_range), cl::sycl::range<1>(work_group_size)),
-                    [=](cl::sycl::nd_item<1> item) {
-                        size_t global_id = item.get_global_linear_id();
-                        size_t local_id = item.get_local_linear_id();
-                        size_t group_id = item.get_group_linear_id();
-
-                        // Each work-group loads its portion of F into local memory
-                        size_t F_start = group_id * F_per_group;
-                        size_t F_end = cl::sycl::min(F_start + F_per_group, F_size);
-                        size_t F_chunk_size = F_end - F_start;
-
-                        // Load F into local memory in a parallel fashion
-                        for (size_t i = local_id; i < F_chunk_size; i += work_group_size) {
-                            local_F[i] = F_acc[F_start + i];
-                        }
-
-                        // Synchronize to ensure all local_F is loaded
-                       item.barrier(cl::sycl::access::fence_space::local_space);
-
-                        // Each work-item processes multiple samples
-                        size_t sample_start = global_id * samples_per_work_item;
-                        size_t sample_end = cl::sycl::min(sample_start + samples_per_work_item, num_samples);
-
-                        long local_count = 0;
-
-                        for (size_t i = sample_start; i < sample_end; ++i) {
-                            //if (i >= num_samples) break; // Guard against overrun
-
-                            const auto sample = sampled_x_acc[i];
-                            long sample_satisfies_F = 0;
-
-                            // Evaluate F over the chunk
-                            for (size_t j = 0; j < F_chunk_size; ++j) {
-                                const bool all_true = ((sample | local_F[j]) == 0b11111111);
-                                sample_satisfies_F = sample_satisfies_F || all_true;
-                            }
-
-                            local_count += sample_satisfies_F;
-                        }
-
-                        // Reduce local counts within the work-group
-                        // Use local memory for reduction
-                        cl::sycl::local_accessor<long, 1> local_sums;
-
-                        // Initialize local sum
-                        if (local_id == 0) {
-                            local_sums[0] = 0;
-                        }
-
-                        item.barrier(cl::sycl::access::fence_space::local_space);
-
-                        // Atomic add local count to local sum
-                        cl::sycl::atomic_ref<long, cl::sycl::memory_order::relaxed,
-                                cl::sycl::memory_scope::work_group,
-                                cl::sycl::access::address_space::local_space>
-                                local_sum_atomic(local_sums[0]);
-                        local_sum_atomic.fetch_add(local_count);
-
-                        item.barrier(cl::sycl::access::fence_space::local_space);
-
-                        // Work-group leader updates the global result
-                        if (local_id == 0) {
-                            cl::sycl::atomic_ref<long, cl::sycl::memory_order::relaxed,
-                                    cl::sycl::memory_scope::device,
-                                    cl::sycl::access::address_space::global_space>
-                                    result_atomic(result_acc[0]);
-                            result_atomic.fetch_add(local_sums[0]);
-                        }
-                    });
-        });
-        queue.wait_and_throw();
-    }, 5, 0, "Optimized evaluation of F with blocking").run();
-    // Retrieve result
-    size_t count = 0;
-    {
-        auto acc = result_buf.get_access<cl::sycl::access::mode::read>();
-        count = acc[0];
-    }
-
+        count = canopy::eval(F, sampled_x, queue);
+    }, 1, 0, "Optimized evaluation of F with blocking").run();
     const auto known_P = compute_exact_prob_F<tally_float_type>(Px);
     std::cout << std::setprecision(15) << std::scientific;
     std::cout << "P(a): " << Px[0] << "\nP(b): " << Px[1] << "\nP(c): " << Px[2] << std::endl;

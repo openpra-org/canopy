@@ -1,6 +1,7 @@
 set(BOOL_HEADERS
         compute.h
         events.h
+        working_set.h
 )
 
 set(BOOL_SOURCES
