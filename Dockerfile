@@ -106,7 +106,8 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
 
 ## Install Intel OneAPI OpenCL
 FROM llvm-clang AS oneapi-clang
-ENV INTEL_ONEAPI_OPENCL_PACKAGES="intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 ocl-icd-libopencl1 ocl-icd-opencl-dev intel-oneapi-runtime-dpcpp* intel-oneapi-runtime-opencl*"
+#ENV INTEL_ONEAPI_OPENCL_PACKAGES="intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 ocl-icd-libopencl1 ocl-icd-opencl-dev intel-oneapi-runtime-dpcpp* intel-oneapi-runtime-opencl*"
+ENV INTEL_ONEAPI_OPENCL_PACKAGES="intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 ocl-icd-libopencl1 ocl-icd-opencl-dev"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
