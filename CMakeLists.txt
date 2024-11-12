@@ -25,7 +25,6 @@ message(STATUS "C++ compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
 ######################### Options ################################################## {{{
 option(BUILD_TESTS "Build tests" ON)  # Influences CTest.
 option(BUILD_EXAMPLES "Build examples" ON)
-option(BUILD_PYBINDINGS "Build python bindings" ON)
 
 # CMake 3.27 - Address CMP0144 policy warning
 # @link https://cmake.org/cmake/help/latest/policy/CMP0167.html#policy:CMP0144
@@ -56,11 +55,6 @@ find_package(AdaptiveCpp CONFIG REQUIRED)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
-
-#if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-#    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
-#    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-#endif()
 
 if(NOT ACPP_DEBUG_LEVEL)
     if(CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -115,11 +109,4 @@ if (BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif ()
 
-#if (BUILD_PYBINDINGS)
-#    set(DEV_MODULE Development.Module)
-#    find_package(Python 3.10 COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
-#    find_package(_nanobind)
-#endif ()
-
 add_subdirectory(src)
-add_subdirectory(external)
