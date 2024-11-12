@@ -8,10 +8,7 @@
 * @brief This file contains the Profiler class which is used to profile the execution time of a function.
 */
 
-#include <fstream>
 #include <functional>
-#include <iomanip>
-#include <iostream>
 #include <random>
 #include <utility>
 

@@ -8,7 +8,6 @@
 
 #include "utils/profiler.h"
 #include "utils/stats.h"
-#include "utils/bits.h"
 #include "utils/types.h"
 #include "utils/device_info.h"
 

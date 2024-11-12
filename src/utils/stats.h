@@ -11,12 +11,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numeric>
 #include <boost/math/distributions/normal.hpp>
 #include <utility>
 #include <stdexcept>
 #include <limits>
-#include <iostream>
 #include <iomanip>
 
 /**

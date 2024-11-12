@@ -10,3 +10,6 @@ set(BITWISE_SRC
 )
 
 add_library(bitwise SHARED ${BITWISE_SRC})
+
+install(TARGETS bitwise
+        RUNTIME DESTINATION lib/canopy)

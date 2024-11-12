@@ -8,11 +8,8 @@
 * @brief This file contains the declaration of stats created from profiling runs.
 */
 
-#include <algorithm>
 #include <cmath>
-#include <numeric>
 #include <ostream>
-#include <vector>
 
 /**
  * @namespace canopy::utils

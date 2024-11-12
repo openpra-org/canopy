@@ -4,10 +4,10 @@ set(SAMPLER_HEADERS
 )
 
 set(SAMPLER_SOURCES
-        sampler.cpp
 )
 
-add_library(sampler STATIC ${SAMPLER_SOURCES} ${SAMPLER_HEADERS})
+add_library(sampler STATIC ${SAMPLER_HEADERS})
+set_target_properties(sampler PROPERTIES LINKER_LANGUAGE CXX)
 
 install(TARGETS sampler
-        RUNTIME DESTINATION share/canopy/lib/sampler)
+        RUNTIME DESTINATION lib/canopy)
