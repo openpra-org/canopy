@@ -2,7 +2,7 @@ set(Boost_USE_STATIC_LIBS OFF)
 
 set(TEST_IO_SOURCES
         test_io.cpp
-        test_io_basic_events_json.cpp
+        test_io_pla.cpp
 )
 
 
@@ -22,10 +22,10 @@ add_definitions(-DBOOST_TEST_DYN_LINK)
 
 
 # Link against the Boost Test library and the project's settings library
-#target_link_libraries(test_io
-#        ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-#        io
-#)
+target_link_libraries(test_io
+        ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+        io
+)
 
 # Enable testing with CTest
 enable_testing()

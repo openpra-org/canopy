@@ -18,6 +18,10 @@ add_sycl_to_target(TARGET bool utils SOURCES ${BOOL_SOURCES} ${BOOL_HEADERS})
 install(TARGETS bool
         RUNTIME DESTINATION share/canopy/lib/bool)
 
+#if(BUILD_PYBINDINGS)
+#    nanobind_add_module(bool_py NOMINSIZE bool.cpp)
+#endif ()
+
 set(BOOL_ET_SOURCES
         kaplan_et.cpp
 )
