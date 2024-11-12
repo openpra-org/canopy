@@ -5,9 +5,13 @@
 #include <vector>
 #include <cstdint>
 
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "flatbuffers/flatbuffers.h"
-#include "io/pla.h" // Include the generated FlatBuffers header
+#include "io/pla.h"
 
 BOOST_AUTO_TEST_SUITE(IOTestsPLA)
 
@@ -68,12 +72,12 @@ BOOST_AUTO_TEST_CASE(test_read_and_validate_pla_from_file)
 
     // Get the length of the file
     ifs.seekg(0, std::ios::end);
-    size_t length = ifs.tellg();
+    const size_t length = ifs.tellg();
     ifs.seekg(0, std::ios::beg);
 
     // Read the content into a vector
     std::vector<char> buffer(length);
-    ifs.read(buffer.data(), length);
+    ifs.read(buffer.data(), static_cast<long>(length));
     ifs.close();
 
     // Verify the buffer has the correct file identifier
@@ -101,6 +105,76 @@ BOOST_AUTO_TEST_CASE(test_read_and_validate_pla_from_file)
     for (size_t i = 0; i < pla->products()->size(); ++i) {
         uint8_t product = pla->products()->Get(i);
         BOOST_CHECK_EQUAL(product, expected_products[i]);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_read_pla_using_mmap)
+{
+    // Open the file 'pla_output.bits' for reading
+    int fd = open("pla_output.bits", O_RDONLY);
+    if (fd == -1) {
+        BOOST_FAIL("Failed to open pla_output.bits for reading");
+    }
+
+    // Obtain the size of the file using fstat
+    struct stat sb{};
+    if (fstat(fd, &sb) == -1) {
+        close(fd);
+        BOOST_FAIL("Failed to get the file size using fstat");
+    }
+
+    size_t length = sb.st_size;
+
+    // Memory-map the file
+    void* mapped_mem = mmap(nullptr, length, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (mapped_mem == MAP_FAILED) {
+        close(fd);
+        BOOST_FAIL("Failed to mmap the file");
+    }
+
+    // Close the file descriptor; the mapping remains valid
+    close(fd);
+
+    // Cast the mapped memory to a const char* buffer
+    const auto buffer = static_cast<const char*>(mapped_mem);
+
+    // Verify the buffer has the correct file identifier
+    if (!canopy::io::PLABufferHasIdentifier(buffer)) {
+        munmap(mapped_mem, length);
+        BOOST_FAIL("The buffer does not have the correct file identifier 'BPLA'.");
+    }
+
+    // Get the root as a PLA object
+    const canopy::io::PLA* pla = canopy::io::GetPLA(buffer);
+
+    // Verify the Type
+    BOOST_CHECK_EQUAL(pla->type(), canopy::io::PLAType_DNF);
+
+    // Verify the NumProducts
+    BOOST_CHECK_EQUAL(pla->num_products(), 5);
+
+    // Verify the NumEventsPerProduct
+    BOOST_CHECK_EQUAL(pla->num_events_per_product(), 8);
+
+    // Verify the Products vector
+    const std::vector<uint8_t> expected_products = {
+        0b01100111,  // 103
+        0b10011111,  // 159
+        0b11011011,  // 219
+        0b10011011,  // 155
+        0b00110011   // 51
+    };
+
+    BOOST_CHECK_EQUAL(pla->products()->size(), expected_products.size());
+
+    for (size_t i = 0; i < pla->products()->size(); ++i) {
+        uint8_t product = pla->products()->Get(i);
+        BOOST_CHECK_EQUAL(product, expected_products[i]);
+    }
+
+    // Unmap the memory
+    if (munmap(mapped_mem, length) == -1) {
+        BOOST_FAIL("Failed to munmap the file");
     }
 }
 
