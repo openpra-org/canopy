@@ -1,14 +1,15 @@
-#include <iostream>
-#include <vector>
-#include <numeric>
-#include <iomanip>
-#include <random>
+#include "compute.h"
+
 #include <CL/sycl.hpp>
+#include <iomanip>
+#include <iostream>
+#include <random>
+#include <vector>
 
 #include "utils/profiler.h"
 #include "utils/stats.h"
-#include "utils/bits.h"
 #include "utils/types.h"
+#include "utils/device_info.h"
 
 /**
  * @brief Number of unique symbols (variables) in expression F.
@@ -43,32 +44,6 @@ static constexpr const size_t n_duplicates = 200000;
 static constexpr const std::size_t F_size = m_products * n_duplicates;
 
 /**
- * @typedef known_event_probabilities
- * @brief Array type to store the known probabilities of events (variables).
- *
- * The size of the array is given by `s_symbols`.
- */
-using known_event_probabilities = std::array<tally_float_type, s_symbols>;
-
-/**
- * @brief Alias for an array of product terms.
- *
- * @tparam T The type of the elements (e.g., bit_vector_type).
- * @tparam size The number of elements in the array.
- */
-template<typename T, size_t size>
-using products = std::array<T, size>;
-
-/**
- * @brief Global array to store the encoded product terms of expression F.
- *
- * Declared as a static global array to give the compiler hints for compile-time optimizations.
- *
- * @note Investigate whether this has any meaningful performance implications.
- */
-static products<bit_vector_type, F_size> F;
-
-/**
  * @brief Known probabilities of the events (variables) a, b, c.
  *
  * @details Stored as an array of type `known_event_probabilities`.
@@ -80,7 +55,7 @@ static products<bit_vector_type, F_size> F;
  *
  * @note Probabilities of variables (events) in expression F.
  */
-static const constexpr known_event_probabilities Px = {
+static const known_event_probabilities Px = {
         1e-3, ///< P(a)
         1e-4, ///< P(b)
         1e-5  ///< P(c)
@@ -91,7 +66,7 @@ static const constexpr known_event_probabilities Px = {
  *
  * @note num_samples = 10,000,000 (i.e., 1e7)
  */
-static constexpr const size_t num_samples = 1e7;
+static constexpr const size_t num_samples = 1e9;
 
 /**
  * @brief Initializes the global array `F` with encoded product terms of expression F.
@@ -122,7 +97,6 @@ static constexpr const size_t num_samples = 1e7;
  *
  * The function duplicates the product terms multiple times to fill the array `F_`.
  *
- * @tparam size The size of the `products` array.
  * @param F_ Reference to the products array to initialize.
  * @param index The starting index in the array where the product terms should be placed.
  *
@@ -131,11 +105,11 @@ static constexpr const size_t num_samples = 1e7;
  * @example
  * @code
  * // Initialize the products array F
- * set_F<F_size>(F, 0);
+ * set_F(F, 0);
  * @endcode
  */
-template<size_t size>
-static inline void set_F(products<bit_vector_type, size> &F_, const size_t index) {
+template <template <typename, typename...> class Container = std::vector, typename bit_vector_type = uint_fast8_t, typename... Args>
+static void set_F(Container<bit_vector_type, Args...>& F_, const size_t index) {
     // first element: encodes ab'c
     // -------------------------------------------------
     // |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |
@@ -191,7 +165,7 @@ static inline void set_F(products<bit_vector_type, size> &F_, const size_t index
     // -------------------------------------------------
     // |  0  |  0  |  1  |  1  |  0  |  0  |  1  |  1  |
     // -------------------------------------------------
-    F_[index+4] = 0b00010011;
+    F_[index+4] = 0b00110011;
 }
 
 /**
@@ -247,10 +221,15 @@ static constexpr float_type compute_exact_prob_F(const known_event_probabilities
  * @param seed Random seed for reproducibility (default is 372).
  *
  * @details
+ * Parallelized using OpenMP to accelerate sampling. Each thread uses its own random number generator
+ * to avoid race conditions and ensure thread safety.
+ *
  * Generates `sampled_x.size()` samples, where each sample is a bit vector representing the truth assignments
  * of variables a, b, c and their negations. Each variable is assigned true (1) with its respective probability.
  * The resulting bit vector encodes the presence of each variable or its negation using the same bit encoding
  * as used in the product terms in `F`.
+ *
+ * @note OpenMP is used to parallelize the loop over samples.
  *
  * @example
  * @code
@@ -259,23 +238,25 @@ static constexpr float_type compute_exact_prob_F(const known_event_probabilities
  * sample_and_assign_truth_values(Px, sampled_x);
  * @endcode
  */
-static void sample_and_assign_truth_values(const known_event_probabilities &to_sample_from, std::vector<bit_vector_type> &sampled_x, const std::size_t seed = 372) {
-    std::random_device rd;
-    std::mt19937 stream(seed);
-    std::uniform_real_distribution<sampling_distribution_type> uniform(0, 1);
+static void sample_and_assign_truth_values(const known_event_probabilities &to_sample_from, symbols &sampled_x, const std::size_t seed = 372) {
+    // Parallelize the sampling using OpenMP
+    #pragma omp parallel default(none) shared(seed, to_sample_from, sampled_x)
+    {
+        // Each thread creates its own random number generator and distribution
+        int thread_num = omp_get_thread_num();
+        std::mt19937 stream(seed + thread_num);
+        std::uniform_real_distribution<sampling_distribution_type> uniform(0, 1);
 
-    // Use std::generate to fill the vector with random numbers
-    std::generate(sampled_x.begin(), sampled_x.end(), [&]() {
-        const size_t x_max = 3;
-        bit_vector_type sample = 0b00000000;
-        for(auto o = 0; o < x_max; o++) {
-            const auto shift_by = 2 * o + (uniform(stream) > Px[o]);
-            sample |= (0b10000000 >> shift_by);
+        // Distribute the loop iterations among threads
+        #pragma omp for
+        for(bit_vector_type &i : sampled_x) {
+            bit_vector_type sample1 = (0b10000000 >> (2 * 0 + (uniform(stream) > to_sample_from[0])));
+            bit_vector_type sample2 = (0b10000000 >> (2 * 1 + (uniform(stream) > to_sample_from[1])));
+            bit_vector_type sample3 = (0b10000000 >> (2 * 2 + (uniform(stream) > to_sample_from[2])));
+            i = (sample1 | sample2 | sample3);
         }
-        return sample;
-    });
+    }
 }
-
 /**
  * @brief Entry point of the program.
  *
@@ -287,9 +268,12 @@ static void sample_and_assign_truth_values(const known_event_probabilities &to_s
  */
 int main() {
 
+    // store the encoded product terms of expression F.
+    products F(F_size);
+
     /// Sets the function and duplicates the products multiple times.
     for (auto i = 0; i < n_duplicates; i++) {
-        set_F<F_size>(F, i * m_products);
+        set_F(F, i * m_products);
     }
 
     /**
@@ -313,138 +297,22 @@ int main() {
      * generating random numbers inside the kernel is a valid one, and requires more work.
      */
     //canopy::bits8<num_samples> sampled_x;
-    std::vector<bit_vector_type> sampled_x(num_samples);
+    symbols sampled_x(num_samples);
 
     std::cout << canopy::utils::Profiler([&]() {
         sample_and_assign_truth_values(Px, sampled_x);
-    }, 1, 0, "generate random number vector, num_samples=1e7, float32").run();
+    }, 5, 0, "generate random number vector, num_samples=1e9, float32").run();
 
-    // Create SYCL buffers
     cl::sycl::queue queue;
-    cl::sycl::buffer<bit_vector_type, 1> F_buf(F.data(), cl::sycl::range<1>(F_size));
-    cl::sycl::buffer<bit_vector_type, 1> sampled_x_buf(sampled_x.data(), cl::sycl::range<1>(sampled_x.size()));
-    cl::sycl::buffer<int, 1> result_buf(cl::sycl::range<1>(1));
+    auto dev = queue.get_device();
+    auto device_info = DeviceInfo(dev);
+    std::cout<<device_info<<std::endl;
+
+    size_t count = 0;
 
     const auto profiler = canopy::utils::Profiler([&]() {
-        // Initialize result to zero
-        {
-            auto acc = result_buf.get_access<cl::sycl::access::mode::discard_write>();
-            acc[0] = 0;
-        }
-
-        queue.submit([&](cl::sycl::handler& cgh) {
-            auto F_acc = F_buf.get_access<cl::sycl::access::mode::read>(cgh);
-            auto sampled_x_acc = sampled_x_buf.get_access<cl::sycl::access::mode::read>(cgh);
-            auto result_acc = result_buf.get_access<cl::sycl::access::mode::read_write>(cgh);
-
-            cgh.parallel_for<class sample_eval_kernel>(cl::sycl::range<1>(num_samples), [=](cl::sycl::id<1> idx) {
-                const size_t i = idx[0];
-                const auto sample = sampled_x_acc[i];
-
-                // Evaluate F
-                for (auto j = 0; j < F_size; j++) {
-                    /**
-                     * @note todo: [optimization]
-                     * - confirm that any_of will yield and terminate the calculation as soon as any row evals to true.
-                     * - confirm that any_of does not enforce any execution order for which rows are evaluated first.
-                     * - together, these two constraints can leverage faster out-of-order, pre-emptive execution
-                     * - ensure that this intent is communicated/articulated in the sycl kernels or stl functions
-                    **/
-                    if ((sample | F_acc[j]) == 0b11111111) {
-                        // Atomic increment the tally and exit
-                        cl::sycl::atomic_ref<int, cl::sycl::memory_order::relaxed, cl::sycl::memory_scope::device,
-                                cl::sycl::access::address_space::global_space>
-                                count_atomic(result_acc[0]);
-                        count_atomic.fetch_add(1);
-                        break; // Early exit
-                    }
-                }
-
-            /**
-             * @brief Implicants / Products
-             * -----------
-             * A product (F_acc[j]) is an implicant for F if ANY assignment (sample_x[i] | F_acc[j]) evals to 0b11111111.
-             * This is because in the SOP representation, any product evaluating to ⊤ will make F ⊤. This because
-             * F, as defined, is in SOP form. So, for F in the form F = p1 + p2 + p3, if any product p evals to ⊤,
-             * F evals to ⊤. You can think of operations in (sample_x[i] | F_acc[j]) as the AND-PLANE in an AND-OR
-             * PLA (programmable logic array).
-             *
-             * We expect that a well-formed product will be an implicant. What do I mean by well-formed?
-             *  (1) no mutually exclusive events i.e. aa'
-             *  (2) no always empty events: abcd, where d was not part of X, so it never gets a truth assignment
-             *
-             * So what's left now are products that take at-least *some* input from the sampling vector X, which
-             * makes the product evaluate to ⊤. of course, during sampling, we might not have encountered such an
-             * input, *yet*.
-             *
-             * In a more straight forward sense, the assignment for X that makes any product ⊤ is the definition
-             * of the product itself, i.e. a product a'b'c evals to ⊤ when a=⊥, b=⊥, c=⊤. This is what product is.
-             **/
-
-             /**
-             * @brief Prime Implicants
-             * -----------------
-             * A prime implicant is an implicant that cannot be further reduced by removing any literals without
-             * ceasing to be an implicant. That is, it is a minimal implicant in terms of the number of literals.
-             *
-             * In the function F(a, b) = ab + a'c,
-             *
-             *     - The product term **P = ab** is a prime implicant; removing any literal (either **a** or **b**)
-             *       results in a term that is not an implicant of F because it would evaluate to true in cases where F
-             *       is false.
-             *
-             *     - However, the term **abc** is not a prime implicant because it can be reduced to **ab**
-             *       (by eliminating **c**) while still being an implicant of F. Therefore, **abc** is not minimal and
-             *       thus not prime.
-             **/
-
-             /**
-             * @brief Essential Prime Implicants
-             * ---------------------------
-             * A prime implicant is `essential` if there exists an assignment X for that prime implicant that makes
-             * F eval to ⊤ while all other products make F eval to ⊥ for that assignment. In other words, An
-             * essential prime implicant is a prime implicant that covers at least one minterm (truth-table row
-             * where the function evaluates to true) that is not covered by any other prime implicant. The key is
-             * that there are outputs that only this prime implicant can account for.
-             *
-             * In other words, an essential prime implicant is a prime implicant that covers at least one minterm
-             * (a combination of variable assignments where F is true) that is not covered by any other prime implicant.
-             * These minterms are exclusively covered by this prime implicant.
-             *
-             * Consider F(a, b, c) with the truth table where F is true for minterms m1, m2, and m5.
-             *      Let:
-             *          - **P1** be a prime implicant covering minterms m1 and m5.
-             *          - **P2** be a prime implicant covering minterms m2 and m5.
-             *
-             *      Minterm m1 is only covered by **P1**, so **P1** is an essential prime implicant.
-             *      Minterm m2 is only covered by **P2**, so **P2** is also an essential prime implicant.
-             *      Minterm m5 is covered by both **P1** and **P2**, so it does not affect the essentiality of either implicant.
-             **/
-
-             /**
-             * @brief Minimal Sum-of-Products (SoP
-             * ------------------------
-             *
-             * Every minimal SoP consists of a sum of prime implicants. This does not imply that a minimal SoP
-             * contains *all* prime implicants. Rather, a minimal SoP contains *all* essential prime implicants, but
-             * it may also contain non-essential prime implicants.
-             *
-             * Therefore, A minimal SoP expression for F is an expression that represents F using the
-             * fewest possible product terms (and thus the fewest literals). It consists of all essential prime
-             * implicants and, if necessary, additional prime implicants to cover all minterms where F is true.
-             **/
-            });
-        });
-        queue.wait_and_throw();
-    }, 1, 0, "F=ab'c+a'b+bc', x=3, term<width>=uint_fast8_t, products=1e6, samples=1e7").run();
-
-    // Retrieve result
-    size_t count = 0;
-    {
-        auto acc = result_buf.get_access<cl::sycl::access::mode::read>();
-        count = acc[0];
-    }
-
+        count = canopy::eval(F, sampled_x, queue);
+    }, 5, 0, "Optimized evaluation of F with blocking").run();
     const auto known_P = compute_exact_prob_F<tally_float_type>(Px);
     std::cout << std::setprecision(15) << std::scientific;
     std::cout << "P(a): " << Px[0] << "\nP(b): " << Px[1] << "\nP(c): " << Px[2] << std::endl;

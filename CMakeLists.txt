@@ -4,8 +4,8 @@ set(CANOPY_VERSION_MAJOR 0)
 set(CANOPY_VERSION_MINOR 1)
 set(CANOPY_VERSION_PATCH 0)
 
-set(CMAKE_C_COMPILER clang-18)
-set(CMAKE_CXX_COMPILER clang++-18)
+set(CMAKE_C_COMPILER /usr/bin/clang-18)
+set(CMAKE_CXX_COMPILER /usr/bin/clang++-18)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,6 +46,7 @@ if(POLICY CMP0144)
 endif()
 
 find_package(_openmp)
+find_package(_flatbuffers)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/../cmake)
 
@@ -61,7 +62,7 @@ if(NOT ACPP_DEBUG_LEVEL)
                 "Choose the debug level, options are: 0 (no debug), 1 (print errors), 2 (also print warnings), 3 (also print general information)"
                 FORCE)
     else()
-        set(ACPP_DEBUG_LEVEL 2 CACHE STRING
+        set(ACPP_DEBUG_LEVEL 0 CACHE STRING
                 "Choose the debug level, options are: 0 (no debug), 1 (print errors), 2 (also print warnings), 3 (also print general information)"
                 FORCE)
     endif()
@@ -98,8 +99,6 @@ add_definitions(-DACPP_STDPAR=on)
 include_directories(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR})
 include_directories("${PROJECT_BINARY_DIR}/include")
 
-add_subdirectory(src)
-
 if (BUILD_TESTS)
     include(CTest)
     enable_testing()
@@ -109,3 +108,5 @@ endif ()
 if (BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif ()
+
+add_subdirectory(src)

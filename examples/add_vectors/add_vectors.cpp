@@ -5,7 +5,7 @@
 
 #include <CL/sycl.hpp>
 
-using data_type = float;
+using data_type = float_t;
 
 /**
  * @brief Fills a vector with random values.
@@ -91,7 +91,7 @@ std::vector<data_type> add_std(const std::vector<data_type> &a, const std::vecto
  * @return int Returns 0 upon successful execution.
  */
 int main() {
-    const size_t vector_size = 80*1024*1024;
+    const size_t vector_size = 0.3*1024*1024*1024;
     std::vector<data_type> a(vector_size);
     std::vector<data_type> b(vector_size);
 
@@ -101,12 +101,12 @@ int main() {
 
     cl::sycl::queue q;
     auto result_sycl = add(q, a, b);
-    auto result_std = add_std(a, b);
+    //auto result_std = add_std(a, b);
 
     // Assert that both results are identical
-    assert(result_sycl.size() == result_std.size());
+    //assert(result_sycl.size() == result_std.size());
     for (size_t i = 0; i < result_sycl.size(); ++i) {
-        assert(result_sycl[i] == result_std[i]);
+        assert(result_sycl[i] == a[i] + b[i]);
     }
 
     std::cout << "Both add and add_std functions produced identical results." << std::endl;

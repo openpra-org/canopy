@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Check if /dev/kfd exists and is not empty
+if [ -d /dev/kfd ]; then
+    sudo chmod o+rw /dev/kfd
+    echo "Updated permissions for device /dev/kfd"
+fi
+
 # Check if /dev/dri/ exists and is not empty
 if [ -d /dev/dri ] && [ "$(ls -A /dev/dri)" ]; then
     # Iterate over each device in /dev/dri/

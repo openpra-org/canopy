@@ -106,7 +106,8 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
 
 ## Install Intel OneAPI OpenCL
 FROM llvm-clang AS oneapi-clang
-ENV INTEL_ONEAPI_OPENCL_PACKAGES="intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 ocl-icd-libopencl1 ocl-icd-opencl-dev intel-oneapi-runtime-dpcpp* intel-oneapi-runtime-opencl*"
+#ENV INTEL_ONEAPI_OPENCL_PACKAGES="intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 ocl-icd-libopencl1 ocl-icd-opencl-dev intel-oneapi-runtime-dpcpp* intel-oneapi-runtime-opencl*"
+ENV INTEL_ONEAPI_OPENCL_PACKAGES="intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 ocl-icd-libopencl1 ocl-icd-opencl-dev"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
@@ -247,3 +248,24 @@ EXPOSE $SSH_PORT
 
 # Set the entrypoint to start sshd and run any other passed arguments
 ENTRYPOINT ["/entrypoints/set-perms-exec-sshd.sh"]
+
+FROM devimage AS builder
+USER root
+WORKDIR /source/build
+COPY . /source
+RUN git submodule update --init --recursive && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+          -DCMAKE_INSTALL_PREFIX=$ADAPTIVE_CPP_INSTALL_DIR \
+          -DCMAKE_C_COMPILER=$CMAKE_C_COMPILER \
+          -DCMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER \
+          .. && \
+    make -j && \
+    make install
+
+#FROM builder AS tester
+#ENV ACPP_VISIBILITY_MASK=""
+#RUN ctest --verbose
+
+#FROM builder AS runner
+#ENV ACPP_VISIBILITY_MASK="$ACPP_VISIBILITY_MASK"
+#RUN /source/build/src/bool

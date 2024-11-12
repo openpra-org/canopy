@@ -10,12 +10,26 @@ If you're building directly in Linux, please follow the steps in the Dockerfile 
 in other environments should be possible but has not been documented yet. Please open a pull request if you'd like to contribute to this effort.
 
 #### docker build
+
+```bash
+docker context create ssh-box --docker "host=ssh://user@my-box"
+```
 ```bash
 docker build -t canopy:ssh-debugger --target=ssh-debugger .
 ```
 
 #### docker run
 In daemon mode:
+```bash
+docker run -d \
+  --name=canopy-dev \
+  -p 2222:2222 \
+  --device=/dev/dri \
+  --device=/dev/kfd \
+  --cap-add=ALL \
+  canopy:ssh-debugger
+```
+
 ```bash
 docker run -d \
   --name=canopy-dev \

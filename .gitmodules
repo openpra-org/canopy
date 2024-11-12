@@ -1,0 +1,6 @@
+[submodule "external/PRAcciolini"]
+	path = external/PRAcciolini
+	url = https://github.com/openpra-org/PRAcciolini.git
+[submodule "external/flatbuffers"]
+	path = external/flatbuffers
+	url = https://github.com/google/flatbuffers.git
