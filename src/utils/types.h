@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <vector>
 
 /**
  * @typedef sampling_distribution_type
