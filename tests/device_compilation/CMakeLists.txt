@@ -11,7 +11,7 @@ find_package(_boost REQUIRED COMPONENTS unit_test_framework)
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories("../../src")
 
-add_definitions(-DBOOST_TEST_DYN_LINK)
+#add_definitions(-DBOOST_TEST_DYN_LINK)
 
 # Add the test executable
 add_executable(test_device_compilation ${TEST_DEVICE_COMPILATION_SOURCES})
