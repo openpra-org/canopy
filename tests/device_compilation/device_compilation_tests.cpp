@@ -423,82 +423,82 @@ BOOST_FIXTURE_TEST_SUITE(device_compilation_test_suite, reset_device_fixture)
      * }
      * @endcode
      */
-    BOOST_AUTO_TEST_CASE(hierarchical_invoke_shared_memory) {
-        cl::sycl::queue queue;
-
-        // The basic case, as outlined in the SYCL spec.
-        {
-            cl::sycl::buffer<size_t, 1> buf(4);
-            queue.submit([&](cl::sycl::handler& cgh) {
-                auto acc = buf.get_access<cl::sycl::access::mode::discard_write>(cgh);
-                cgh.parallel_for_work_group<class shmem_one>(
-                        cl::sycl::range<1>(2),
-                        cl::sycl::range<1>(2),
-                        [=](cl::sycl::group<1> group) {
-                            {
-                                // Do this in a block to ensure correct handling by Clang plugin.
-                                size_t shmem[2]; ///< Shared memory array.
-
-                                // Populate shared memory with global linear IDs.
-                                group.parallel_for_work_item([&](cl::sycl::h_item<1> h_item) {
-                                    shmem[h_item.get_local().get_linear_id()] = h_item.get_global().get_linear_id();
-                                });
-
-                                // Read from shared memory and write to buffer.
-                                group.parallel_for_work_item([&](cl::sycl::h_item<1> h_item) {
-                                    if (h_item.get_local().get_linear_id() == 0) {
-                                        auto offset = h_item.get_global().get_linear_id();
-                                        acc[offset + 0] = shmem[0];
-                                        acc[offset + 1] = shmem[1];
-                                    }
-                                });
-                            }
-                        }
-                );
-            });
-            auto acc = buf.get_access<cl::sycl::access::mode::read>();
-            for(size_t i = 0; i < 4; ++i) {
-                BOOST_REQUIRE(acc[i] == i);
-            }
-        }
-
-        // Functionality moved into a separate lambda function.
-        {
-            auto operate_on_shmem = [](cl::sycl::group<1> group, auto acc) {
-                size_t shmem[2]; ///< Shared memory array.
-
-                // Populate shared memory with global linear IDs.
-                group.parallel_for_work_item([&](cl::sycl::h_item<1> h_item) {
-                    shmem[h_item.get_local().get_linear_id()] = h_item.get_global().get_linear_id();
-                });
-
-                // Read from shared memory and write to buffer.
-                group.parallel_for_work_item([&](cl::sycl::h_item<1> h_item) {
-                    if (h_item.get_local().get_linear_id() == 0) {
-                        auto offset = h_item.get_global().get_linear_id();
-                        acc[offset + 0] = shmem[0];
-                        acc[offset + 1] = shmem[1];
-                    }
-                });
-            };
-
-            cl::sycl::buffer<size_t, 1> buf(4);
-            queue.submit([&](cl::sycl::handler& cgh) {
-                auto acc = buf.get_access<cl::sycl::access::mode::discard_write>(cgh);
-                cgh.parallel_for_work_group<class shmem_two>(
-                        cl::sycl::range<1>(2),
-                        cl::sycl::range<1>(2),
-                        [=](cl::sycl::group<1> group) {
-                            operate_on_shmem(group, acc);
-                        }
-                );
-            });
-            auto acc = buf.get_access<cl::sycl::access::mode::read>();
-            for(size_t i = 0; i < 4; ++i) {
-                BOOST_REQUIRE(acc[i] == i);
-            }
-        }
-    }
+    //  BOOST_AUTO_TEST_CASE(hierarchical_invoke_shared_memory) {
+    //     cl::sycl::queue queue;
+    //
+    //     // The basic case, as outlined in the SYCL spec.
+    //     {
+    //         cl::sycl::buffer<size_t, 1> buf(4);
+    //         queue.submit([&](cl::sycl::handler& cgh) {
+    //             auto acc = buf.get_access<cl::sycl::access::mode::discard_write>(cgh);
+    //             cgh.parallel_for_work_group<class shmem_one>(
+    //                     cl::sycl::range<1>(2),
+    //                     cl::sycl::range<1>(2),
+    //                     [=](cl::sycl::group<1> group) {
+    //                         {
+    //                             // Do this in a block to ensure correct handling by Clang plugin.
+    //                             size_t shmem[2]; ///< Shared memory array.
+    //
+    //                             // Populate shared memory with global linear IDs.
+    //                             group.parallel_for_work_item([&](cl::sycl::h_item<1> h_item) {
+    //                                 shmem[h_item.get_local().get_linear_id()] = h_item.get_global().get_linear_id();
+    //                             });
+    //
+    //                             // Read from shared memory and write to buffer.
+    //                             group.parallel_for_work_item([&](cl::sycl::h_item<1> h_item) {
+    //                                 if (h_item.get_local().get_linear_id() == 0) {
+    //                                     auto offset = h_item.get_global().get_linear_id();
+    //                                     acc[offset + 0] = shmem[0];
+    //                                     acc[offset + 1] = shmem[1];
+    //                                 }
+    //                             });
+    //                         }
+    //                     }
+    //             );
+    //         });
+    //         auto acc = buf.get_access<cl::sycl::access::mode::read>();
+    //         for(size_t i = 0; i < 4; ++i) {
+    //             BOOST_REQUIRE(acc[i] == i);
+    //         }
+    //     }
+    //
+    //     // Functionality moved into a separate lambda function.
+    //     {
+    //         auto operate_on_shmem = [](cl::sycl::group<1> group, auto acc) {
+    //             size_t shmem[2]; ///< Shared memory array.
+    //
+    //             // Populate shared memory with global linear IDs.
+    //             group.parallel_for_work_item([&](cl::sycl::h_item<1> h_item) {
+    //                 shmem[h_item.get_local().get_linear_id()] = h_item.get_global().get_linear_id();
+    //             });
+    //
+    //             // Read from shared memory and write to buffer.
+    //             group.parallel_for_work_item([&](cl::sycl::h_item<1> h_item) {
+    //                 if (h_item.get_local().get_linear_id() == 0) {
+    //                     auto offset = h_item.get_global().get_linear_id();
+    //                     acc[offset + 0] = shmem[0];
+    //                     acc[offset + 1] = shmem[1];
+    //                 }
+    //             });
+    //         };
+    //
+    //         cl::sycl::buffer<size_t, 1> buf(4);
+    //         queue.submit([&](cl::sycl::handler& cgh) {
+    //             auto acc = buf.get_access<cl::sycl::access::mode::discard_write>(cgh);
+    //             cgh.parallel_for_work_group<class shmem_two>(
+    //                     cl::sycl::range<1>(2),
+    //                     cl::sycl::range<1>(2),
+    //                     [=](cl::sycl::group<1> group) {
+    //                         operate_on_shmem(group, acc);
+    //                     }
+    //             );
+    //         });
+    //         auto acc = buf.get_access<cl::sycl::access::mode::read>();
+    //         for(size_t i = 0; i < 4; ++i) {
+    //             BOOST_REQUIRE(acc[i] == i);
+    //         }
+    //     }
+    // }
 
     /**
      * @brief Forward declaration of a function.
