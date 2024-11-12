@@ -248,3 +248,16 @@ EXPOSE $SSH_PORT
 
 # Set the entrypoint to start sshd and run any other passed arguments
 ENTRYPOINT ["/entrypoints/set-perms-exec-sshd.sh"]
+
+FROM devimage AS BUILDER
+USER root
+WORKDIR /source/build
+COPY . /source
+RUN git submodule update --init --recursive && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+          -DCMAKE_INSTALL_PREFIX=$ADAPTIVE_CPP_INSTALL_DIR \
+          -DCMAKE_C_COMPILER=$CMAKE_C_COMPILER \
+          -DCMAKE_CXX_COMPILER=$CMAKE_CXX_COMPILER \
+          .. && \
+    make -j && \
+    make install
