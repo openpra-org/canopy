@@ -249,7 +249,7 @@ EXPOSE $SSH_PORT
 # Set the entrypoint to start sshd and run any other passed arguments
 ENTRYPOINT ["/entrypoints/set-perms-exec-sshd.sh"]
 
-FROM devimage AS BUILDER
+FROM devimage AS builder
 USER root
 WORKDIR /source/build
 COPY . /source
@@ -261,3 +261,11 @@ RUN git submodule update --init --recursive && \
           .. && \
     make -j && \
     make install
+
+#FROM builder AS tester
+#ENV ACPP_VISIBILITY_MASK=""
+#RUN ctest --verbose
+
+#FROM builder AS runner
+#ENV ACPP_VISIBILITY_MASK="$ACPP_VISIBILITY_MASK"
+#RUN /source/build/src/bool
