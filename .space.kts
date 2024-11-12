@@ -34,7 +34,7 @@ job("canopy") {
         interpreter = "/bin/bash"
         content = """
                         docker pull $remote:{{ branchSlug }} || true
-                        docker build --tag="$remote:{{ branchSlug }}" --tag="$remote:ci-{{ run:number }}-{{ branchSlug }}" -f ./docker/Dockerfile .
+                        docker build --tag="$remote:{{ branchSlug }}" --tag="$remote:ci-{{ run:number }}-{{ branchSlug }}" .
                         docker push "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                         """
       }
