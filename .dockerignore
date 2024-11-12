@@ -2,3 +2,4 @@ cmake-build-*
 build
 .venv
 venv
+docs/emitted/html/*

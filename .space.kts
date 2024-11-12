@@ -1,4 +1,4 @@
-job("canopy") {
+job("canopy-ci") {
 
     val registry = "packages.space.openpra.org/p/openpra/containers/"
     val image = "canopy"
