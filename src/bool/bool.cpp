@@ -301,7 +301,7 @@ int main() {
 
     std::cout << canopy::utils::Profiler([&]() {
         sample_and_assign_truth_values(Px, sampled_x);
-    }, 1, 0, "generate random number vector, num_samples=1e7, float32").run();
+    }, 5, 0, "generate random number vector, num_samples=1e9, float32").run();
 
     cl::sycl::queue queue;
     auto dev = queue.get_device();
@@ -312,7 +312,7 @@ int main() {
 
     const auto profiler = canopy::utils::Profiler([&]() {
         count = canopy::eval(F, sampled_x, queue);
-    }, 1, 0, "Optimized evaluation of F with blocking").run();
+    }, 5, 0, "Optimized evaluation of F with blocking").run();
     const auto known_P = compute_exact_prob_F<tally_float_type>(Px);
     std::cout << std::setprecision(15) << std::scientific;
     std::cout << "P(a): " << Px[0] << "\nP(b): " << Px[1] << "\nP(c): " << Px[2] << std::endl;
