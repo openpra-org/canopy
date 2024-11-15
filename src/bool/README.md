@@ -163,6 +163,237 @@ runs: [5] : Optimized evaluation of F with blocking
 
 Process finished with exit code 0
 ```
+
+```shell
+/tmp/tmp.Ss0qDbp2iT/cmake-build-release/src/bool/bool -v
+:::::::::::::::::::::::::::: PROFILER SUMMARY [ns] ::::::::::::::::::::::::::::::
+runs: [5] : generate random number vector, num_samples=1e9, float32
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+[min,  max] : [2.94138283e+09, 3.04036114e+09]
+[avg,  std] : [2.98294273e+09, 3.67749196e+07]
+[5th, 95th] : [2.94138283e+09, 3.04036114e+09]
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+Device Information:
+General Information:
+  Device Name: Tesla P4
+  Vendor Name: NVIDIA
+  Driver Version: 12040
+  Profile: FULL_PROFILE
+  Version: sm_61
+  OpenCL C Version: 1.2 HIPSYCL
+  Device Type: GPU
+  Vendor ID: 4318
+  Platform: CUDA
+  Is Available: true
+  Is Compiler Available: true
+  Is Linker Available: true
+  Reference Count: 1
+  Available Extensions:
+
+Compute Unit Information:
+  Max Compute Units: 20
+  Max Work Item Dimensions: 3
+  Max Work Item Sizes: 64 1024 1024 
+  Max-Num Sub-Groups: 32
+  Sub-group Sizes: 32 
+  Sub-group Independent Forward Progress: true
+  Max Work Group Size: 1024
+  Preferred Vector Widths:
+    char: 4
+    short: 2
+    int: 1
+    long: 1
+    float: 1
+    double: 1
+    half: 2
+  Native Vector Widths:
+    char: 4
+    short: 2
+    int: 1
+    long: 1
+    float: 1
+    double: 1
+    half: 2
+  Max Clock Frequency: 1531 MHz
+  Address Bits: 64
+  Max Samplers: 0
+  Max Parameter Size: 18446744073709551615
+  Mem Base Address Align: 8 bits
+  Profiling Timer Resolution: 1
+  Endian Little: true
+
+
+Memory Information:
+  Global Memory Size: 7606 MB
+  Max Memory Allocation Size: 7606 MB
+  Local Memory Size: 48 KB
+  Local Memory Type: local
+  Error Correction Support: false
+  Host Unified Memory: false
+  Global Memory Cache Type: read_write
+  Global Memory Cache Line Size: 128
+  Global Memory Cache Size: 2048 KB
+  Max Constant Buffer Size: 64 KB
+  Max Constant Args: 4294967295
+  Printf Buffer Size: 18446744073709551615
+  Preferred Interop User Sync: true
+
+Image Support Information:
+  Image Support: false
+
+Floating Point Configurations:
+  Half Precision FP Configurations:
+    denorm
+    inf_nan
+    round_to_nearest
+    round_to_zero
+    round_to_inf
+    fma
+    correctly_rounded_divide_sqrt
+  Single Precision FP Configurations:
+    denorm
+    inf_nan
+    round_to_nearest
+    round_to_zero
+    round_to_inf
+    fma
+    correctly_rounded_divide_sqrt
+  Double Precision FP Configurations:
+    denorm
+    inf_nan
+    round_to_nearest
+    round_to_zero
+    round_to_inf
+    fma
+    correctly_rounded_divide_sqrt
+
+Execution Capabilities:
+  exec_kernel
+  Queue Profiling: true
+  Built-in Kernels:
+
+Partition Information:
+  Partition Max Sub-devices: 0
+  Partition Properties:
+  Partition Affinity Domains:
+    not_applicable
+  Partition Type Property: no_partition
+  Partition Type Affinity Domain: not_applicable
+
+Aspects Supported:
+  gpu
+  accelerator
+  fp64
+  atomic64
+  queue_profiling
+  usm_device_allocations
+  usm_host_allocations
+  usm_shared_allocations
+
+Other Information:
+  [Error retrieving other information: Device is not a subdevice]
+
+max_num_sub_groups: 32
+max_sub_group_size: 0
+max_work_item_size_1d: 1024
+max_work_group_size: 1024
+max_compute_units: 20
+num_work_groups: 4081633
+work_group_size: 1024
+global_range: 4179592192
+total_work_items: 4179592192
+samples_per_work_item: 1
+F_per_group: 245
+F_size: 1000000000
+num_samples: 1000000000
+desired_occupancy: 204800
+
+[AdaptiveCpp Warning] kernel_cache: This application run has resulted in new binaries being JIT-compiled. This indicates that the runtime optimization process has not yet reached peak performance. You may want to run the application again until this warning no longer appears to achieve optimal performance.
+max_num_sub_groups: 32
+max_sub_group_size: 0
+max_work_item_size_1d: 1024
+max_work_group_size: 1024
+max_compute_units: 20
+num_work_groups: 4081633
+work_group_size: 1024
+global_range: 4179592192
+total_work_items: 4179592192
+samples_per_work_item: 1
+F_per_group: 245
+F_size: 1000000000
+num_samples: 1000000000
+desired_occupancy: 204800
+
+max_num_sub_groups: 32
+max_sub_group_size: 0
+max_work_item_size_1d: 1024
+max_work_group_size: 1024
+max_compute_units: 20
+num_work_groups: 4081633
+work_group_size: 1024
+global_range: 4179592192
+total_work_items: 4179592192
+samples_per_work_item: 1
+F_per_group: 245
+F_size: 1000000000
+num_samples: 1000000000
+desired_occupancy: 204800
+
+max_num_sub_groups: 32
+max_sub_group_size: 0
+max_work_item_size_1d: 1024
+max_work_group_size: 1024
+max_compute_units: 20
+num_work_groups: 4081633
+work_group_size: 1024
+global_range: 4179592192
+total_work_items: 4179592192
+samples_per_work_item: 1
+F_per_group: 245
+F_size: 1000000000
+num_samples: 1000000000
+desired_occupancy: 204800
+
+max_num_sub_groups: 32
+max_sub_group_size: 0
+max_work_item_size_1d: 1024
+max_work_group_size: 1024
+max_compute_units: 20
+num_work_groups: 4081633
+work_group_size: 1024
+global_range: 4179592192
+total_work_items: 4179592192
+samples_per_work_item: 1
+F_per_group: 245
+F_size: 1000000000
+num_samples: 1000000000
+desired_occupancy: 204800
+
+P(a): 1.000000047497451e-03
+P(b): 9.999999747378752e-05
+P(c): 9.999999747378752e-06
+total simulations         [n]: 1000000000
+true evaluations          [T]: 100195
+false evaluations         [F]: 999899805
+known expected value P(f) [μ]: 1.000099873635918e-04
+estimated mean            [m]: 1.001950004138052e-04
+estimated variance        [v]: 1.001849563595295e-13
+std. error √[m•(1-m)/n] = [s]: 3.165200723742601e-07
+absolute error  |μ – m| = [ε]: 1.850130502134562e-07
+percentage error (ε/μ)% = [%]: 1.849945783615112e-01
+95% CI: 9.957463043974712e-05, 1.008153703878634e-04
+99% CI: 9.937970025930554e-05, 1.010103005683050e-04
+
+:::::::::::::::::::::::::::: PROFILER SUMMARY [ns] ::::::::::::::::::::::::::::::
+runs: [5] : Optimized evaluation of F with blocking
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+[min,  max] : [7.63632041e+08, 2.08912394e+09]
+[avg,  std] : [1.11715888e+09, 4.95425656e+08]
+[5th, 95th] : [7.63632041e+08, 2.08912394e+09]
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+Process finished with exit code 0
+```
 ```shell
 /tmp/tmp.xQ8wveOZzU/cmake-build-release/src/bool/bool_et
 M1 = 

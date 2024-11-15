@@ -49,24 +49,21 @@ job("canopy-ci") {
             shellScript("clinfo") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
+                          docker run --rm -e ACPP_VISIBILITY_MASK=cuda "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
                           """
             }
             shellScript("acpp-info") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
+                          docker run --rm -e ACPP_VISIBILITY_MASK=cuda "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
                           """
             }
 
             shellScript("ctest") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=cuda "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
                           """
@@ -75,7 +72,6 @@ job("canopy-ci") {
             shellScript("run") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=cuda "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
                           """
@@ -89,24 +85,21 @@ job("canopy-ci") {
             shellScript("clinfo") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
+                          docker run --rm -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
                           """
             }
             shellScript("acpp-info") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
+                          docker run --rm -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
                           """
             }
 
             shellScript("ctest") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
                           """
@@ -115,7 +108,6 @@ job("canopy-ci") {
             shellScript("run") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
                           """
@@ -129,24 +121,21 @@ job("canopy-ci") {
             shellScript("clinfo") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
+                          docker run --rm -e ACPP_VISIBILITY_MASK=omp "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
                           """
             }
             shellScript("acpp-info") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
+                          docker run --rm -e ACPP_VISIBILITY_MASK=omp "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
                           """
             }
 
             shellScript("ctest") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=omp "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
                           """
@@ -155,7 +144,6 @@ job("canopy-ci") {
             shellScript("run") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=omp "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
                           """
@@ -169,24 +157,21 @@ job("canopy-ci") {
             shellScript("clinfo") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
+                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
                           """
             }
             shellScript("acpp-info") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
+                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
                           """
             }
 
             shellScript("ctest") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
                           """
@@ -195,7 +180,6 @@ job("canopy-ci") {
             shellScript("run") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
                           """
@@ -209,24 +193,21 @@ job("canopy-ci") {
             shellScript("clinfo") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
+                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
                           """
             }
             shellScript("acpp-info") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
+                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
                           """
             }
 
             shellScript("ctest") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
                           """
@@ -235,49 +216,44 @@ job("canopy-ci") {
             shellScript("run") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
                           docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
                           """
             }
         }
 
-        host("LZ/OpenCL Intel GPU Tests") {
+        host("Level Zero Intel GPU Tests") {
             requirements {
                 workerTags("intel_gpu")
             }
             shellScript("clinfo") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
+                          docker run --rm -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
                           """
             }
             shellScript("acpp-info") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
+                          docker run --rm -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
                           """
             }
 
             shellScript("ctest") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
+                          docker run --rm -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
                           """
             }
 
             shellScript("run") {
                 interpreter = "/bin/bash"
                 content = """
-                          trap 'docker rmi "$remote:ci-{{ run:number }}-{{ branchSlug }}"' EXIT
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
+                          docker run --rm -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
                           """
             }
         }

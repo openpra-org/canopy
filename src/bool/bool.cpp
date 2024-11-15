@@ -32,7 +32,7 @@ static constexpr const size_t m_products = 5;
  *
  * @note n_duplicates = 200,000
  */
-static constexpr const size_t n_duplicates = 200000;
+static constexpr const size_t n_duplicates = 2e8;
 
 /**
  * @brief Total number of product terms after duplication.
@@ -64,7 +64,7 @@ static const known_event_probabilities Px = {
 /**
  * @brief Number of Monte Carlo samples to generate.
  *
- * @note num_samples = 10,000,000 (i.e., 1e7)
+ * @note num_samples = 1,000,000,000 (i.e., 1e9)
  */
 static constexpr const size_t num_samples = 1e9;
 

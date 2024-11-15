@@ -106,20 +106,18 @@ size_type eval(cl::sycl::buffer<bit_vector_type, 1> &F_buf, cl::sycl::buffer<bit
         const auto F_size = F_buf.size();
         const auto num_samples = sampled_x_buf.size();
         const auto splits = working_set<>::compute(queue, F_size, num_samples);
-        const auto F_per_group = splits.F_per_group;
-        const auto work_group_size = splits.max_work_group_size;
-        const auto samples_per_work_item = splits.samples_per_work_item;
-
-        // auto F_acc = F_buf.get_access<cl::sycl::access::mode::read>(cgh);
-        // auto sampled_x_acc = sampled_x_buf.get_access<cl::sycl::access::mode::read>(cgh);
-        // auto result_acc = result_buf.get_access<cl::sycl::access::mode::read_write>(cgh);
 
         auto F_acc = F_buf.template get_access<cl::sycl::access::mode::read>(cgh);
         auto sampled_x_acc = sampled_x_buf.template get_access<cl::sycl::access::mode::read>(cgh);
         auto result_acc = result_buf.template get_access<cl::sycl::access::mode::read_write>(cgh);
         // Local memory for storing a chunk of F
         cl::sycl::local_accessor<bit_vector_type, 1> local_F(splits.F_per_group, cgh);
+        cl::sycl::local_accessor<long, 1> local_sums(cl::sycl::range<1>(1), cgh);
 
+        // todo:: use sub-group for warp-level SIMD parallelism
+
+        // todo:: handle case when num_samples is large enough that all the data does not sit in memory
+        // todo:: implement batching
         const auto globalSize = cl::sycl::range<1>(splits.global_range);
         const auto localSize = cl::sycl::range<1>(splits.max_work_group_size);
         const auto executionRange = cl::sycl::nd_range<1>(globalSize, localSize);
@@ -130,12 +128,12 @@ size_type eval(cl::sycl::buffer<bit_vector_type, 1> &F_buf, cl::sycl::buffer<bit
             const size_t group_id = item.get_group_linear_id();
 
             // Each work-group loads its portion of F into local memory
-            const size_t F_start = group_id * F_per_group;
-            size_t F_end = cl::sycl::min(F_start + F_per_group, F_size);
+            const size_t F_start = group_id * splits.F_per_group;
+            size_t F_end = cl::sycl::min(F_start + splits.F_per_group, F_size);
             size_t F_chunk_size = F_end - F_start;
 
             // Load F into local memory in a parallel fashion
-            for (size_t i = local_id; i < F_chunk_size; i += work_group_size) {
+            for (size_t i = local_id; i < F_chunk_size; i += splits.max_work_group_size) {
                 local_F[i] = F_acc[F_start + i];
             }
 
@@ -143,13 +141,13 @@ size_type eval(cl::sycl::buffer<bit_vector_type, 1> &F_buf, cl::sycl::buffer<bit
             item.barrier(cl::sycl::access::fence_space::local_space);
 
             // Each work-item processes multiple samples
-            size_t sample_start = global_id * samples_per_work_item;
-            size_t sample_end = cl::sycl::min(sample_start + samples_per_work_item, num_samples);
+            size_t sample_start = global_id * splits.samples_per_work_item;
+            size_t sample_end = cl::sycl::min(sample_start + splits.samples_per_work_item, num_samples);
 
             long local_count = 0;
 
             for (size_t i = sample_start; i < sample_end; ++i) {
-                // if (i >= num_samples) break; // Guard against overrun
+                //if (i >= num_samples) break; // Guard against overrun
 
                 const auto sample = sampled_x_acc[i];
                 long sample_satisfies_F = 0;
@@ -165,8 +163,6 @@ size_type eval(cl::sycl::buffer<bit_vector_type, 1> &F_buf, cl::sycl::buffer<bit
 
             // Reduce local counts within the work-group
             // Use local memory for reduction
-            cl::sycl::local_accessor<long, 1> local_sums;
-
             // Initialize local sum
             if (local_id == 0) {
                 local_sums[0] = 0;
@@ -198,7 +194,7 @@ size_type eval(cl::sycl::buffer<bit_vector_type, 1> &F_buf, cl::sycl::buffer<bit
     size_type count = 0;
     {
         auto acc = result_buf.get_access<cl::sycl::access::mode::read>();
-        count = acc[0];
+        count = static_cast<size_type>(acc[0]);
     }
 
     return count;
