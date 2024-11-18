@@ -11,9 +11,7 @@
  * Word-level optimizations can be made for different bit-widths using template specialization for differing data types.
  */
 
-#include <limits>
 #include <vector>
-#include <cstdint>
 #include <climits>
 #include <cassert>
 
@@ -33,11 +31,10 @@ namespace canopy {
      * the total number of bits and the size of the window type.
      *
      * @tparam window The type of each window, typically an integer type.
-     * @tparam num_bits The total number of bits to manage.
      *
      * @example
      * ```
-     * canopy::bits<uint_fast16_t, 128> myBits;
+     * canopy::nbits<uint_fast16_t> myBits;
      * ```
      */
     template<typename window>
@@ -73,7 +70,7 @@ namespace canopy {
      * @tparam T The type to check.
      */
     template<typename T>
-    concept EightBitsWide = (sizeof(T) == 1);
+    concept EightBitsWide = sizeof(T) == 1;
 
     /**
      * @brief Concept to ensure the window type is 16 bits wide.
@@ -83,7 +80,7 @@ namespace canopy {
      * @tparam T The type to check.
      */
     template<typename T>
-    concept SixteenBitsWide = (sizeof(T) == 2);
+    concept SixteenBitsWide = sizeof(T) == 2;
 
     /**
      * @brief Concept to ensure the window type is 32 bits wide.
@@ -93,7 +90,7 @@ namespace canopy {
      * @tparam T The type to check.
      */
     template<typename T>
-    concept ThirtyTwoBitsWide = (sizeof(T) == 4);
+    concept ThirtyTwoBitsWide = sizeof(T) == 4;
 
     /**
      * @brief Concept to ensure the window type is 64 bits wide.
@@ -103,6 +100,6 @@ namespace canopy {
      * @tparam T The type to check.
      */
     template<typename T>
-    concept SixtyFourBitsWide = (sizeof(T) == 8);
+    concept SixtyFourBitsWide = sizeof(T) == 8;
 }
 
