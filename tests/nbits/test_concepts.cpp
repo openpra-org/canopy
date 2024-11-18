@@ -77,8 +77,54 @@ BOOST_AUTO_TEST_SUITE(NBitsConceptsTests)
 
         // Negative tests
         static_assert(!canopy::SixtyFourBitsWide<uint32_t>, "uint32_t should not be SixtyFourBitsWide");
-        //static_assert(!canopy::SixtyFourBitsWide<long double>, "long double should not be SixtyFourBitsWide on most platforms");
-        //static_assert(!canopy::SixtyFourBitsWide<void*>, "void* may not be SixtyFourBitsWide");
+        static_assert(!canopy::SixtyFourBitsWide<long double>, "long double should not be SixtyFourBitsWide on most platforms");
+        static_assert(!canopy::SixtyFourBitsWide<void*>, "void* may not be SixtyFourBitsWide");
+    }
+
+/**
+ * @brief Test types with non-standard sizes and platform-dependent types.
+ * This test considers interesting base and corner cases.
+ */
+    BOOST_AUTO_TEST_CASE(NonStandardSizeTest)
+    {
+        // Platform-dependent types
+        if constexpr (sizeof(int) * CHAR_BIT == 32)
+        {
+            static_assert(canopy::ThirtyTwoBitsWide<int>, "int should be ThirtyTwoBitsWide");
+        }
+        else if constexpr (sizeof(int) * CHAR_BIT == 16)
+        {
+            static_assert(canopy::SixteenBitsWide<int>, "int should be SixteenBitsWide");
+        }
+        else
+        {
+            static_assert(!canopy::ThirtyTwoBitsWide<int>, "int is neither 16 nor 32 bits");
+            static_assert(!canopy::SixteenBitsWide<int>, "int is neither 16 nor 32 bits");
+        }
+
+        if constexpr (sizeof(long) * CHAR_BIT == 64)
+        {
+            static_assert(canopy::SixtyFourBitsWide<long>, "long should be SixtyFourBitsWide");
+        }
+        else if constexpr (sizeof(long) * CHAR_BIT == 32)
+        {
+            static_assert(canopy::ThirtyTwoBitsWide<long>, "long should be ThirtyTwoBitsWide");
+        }
+        else
+        {
+            static_assert(!canopy::SixtyFourBitsWide<long>, "long is neither 32 nor 64 bits");
+            static_assert(!canopy::ThirtyTwoBitsWide<long>, "long is neither 32 nor 64 bits");
+        }
+
+        // Custom type to test size
+        struct CustomType {
+            uint8_t data[3]; // 24 bits
+        };
+        static_assert(sizeof(CustomType) * CHAR_BIT == 24, "CustomType should be 24 bits wide");
+        static_assert(!canopy::EightBitsWide<CustomType>, "CustomType should not be EightBitsWide");
+        static_assert(!canopy::SixteenBitsWide<CustomType>, "CustomType should not be SixteenBitsWide");
+        static_assert(!canopy::ThirtyTwoBitsWide<CustomType>, "CustomType should not be ThirtyTwoBitsWide");
+        static_assert(!canopy::SixtyFourBitsWide<CustomType>, "CustomType should not be SixtyFourBitsWide");
     }
 
 /**
