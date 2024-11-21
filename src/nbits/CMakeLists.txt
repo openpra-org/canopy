@@ -3,9 +3,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(NBITS_HEADERS
         nbits.h
         bits8.h
-        16bits.h
-        32bits.h
-        64bits.h
+        bits16.h
+        bits32.h
+        bits64.h
 )
 
 add_library(nbits STATIC ${NBITS_HEADERS})
