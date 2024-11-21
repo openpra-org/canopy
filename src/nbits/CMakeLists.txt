@@ -2,7 +2,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(NBITS_HEADERS
         nbits.h
-        8bits.h
+        bits8.h
         16bits.h
         32bits.h
         64bits.h
