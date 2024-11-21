@@ -32,7 +32,7 @@ static constexpr const size_t m_products = 5;
  *
  * @note n_duplicates = 200,000
  */
-static constexpr const size_t n_duplicates = 2;
+static constexpr const size_t n_duplicates = 2e8;
 
 /**
  * @brief Total number of product terms after duplication.

@@ -129,8 +129,8 @@ size_type eval(cl::sycl::buffer<bit_vector_type, 1> &F_buf, cl::sycl::buffer<bit
 
             // Each work-group loads its portion of F into local memory
             const size_t F_fragment_start = group_id * splits.F_per_group;
-            size_t F_fragment_end = cl::sycl::min(F_fragment_start + splits.F_per_group, F_size);
-            size_t F_fragment_size = F_fragment_end - F_fragment_start;
+            const size_t F_fragment_end = cl::sycl::min(F_fragment_start + splits.F_per_group, F_size);
+            const size_t F_fragment_size = F_fragment_end - F_fragment_start;
 
             // Load F into local memory in a parallel fashion
             for (size_t i = local_id; i < F_fragment_size; i += splits.work_group_size) {
@@ -299,9 +299,9 @@ size_type eval_naive_2D(cl::sycl::buffer<bit_vector_type, 2> &F_buf, cl::sycl::b
 template <template <typename, typename...> class Container = std::vector, typename bit_vector_type = uint_fast8_t, typename... Args>
 std::size_t eval(Container<bit_vector_type, Args...>& F, Container<bit_vector_type, Args...>& sampled_x, cl::sycl::queue &queue) {
     // https://www.intel.com/content/www/us/en/docs/oneapi/optimization-guide-gpu/2024-2/sub-groups-and-simd-vectorization.html#DATA-SHARING
-    cl::sycl::buffer<bit_vector_type, 2> F_buf(F.data(), cl::sycl::range<2>(F.size()));
-    cl::sycl::buffer<bit_vector_type, 2> sampled_x_buf(sampled_x.data(), cl::sycl::range<2>(sampled_x.size()));
-    return eval_naive_2D(F_buf, sampled_x_buf, queue);
+    cl::sycl::buffer<bit_vector_type, 1> F_buf(F.data(), cl::sycl::range<1>(F.size()));
+    cl::sycl::buffer<bit_vector_type, 1> sampled_x_buf(sampled_x.data(), cl::sycl::range<1>(sampled_x.size()));
+    return eval(F_buf, sampled_x_buf, queue);
 }
 
 
