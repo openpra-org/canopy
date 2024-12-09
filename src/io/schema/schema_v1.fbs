@@ -7,7 +7,7 @@ enum TensorType: ubyte {
   UINT4  = 0x04, // 0b 0000 0100
   UINT8  = 0x08, // 0b 0000 1000
   UINT16 = 0x10, // 0b 0001 0000
-  UINT32 = 0x20, // 0b 0010 0000
+  UINT32 = 0x00, // 0b 0000 0000 <---- DEFAULT
   UINT64 = 0x40, // 0b 0100 0000
 
   FLOAT16 = 0x90, // 0b 1001 0000
