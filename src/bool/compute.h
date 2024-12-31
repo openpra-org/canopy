@@ -92,6 +92,252 @@
 namespace canopy {
 
 template <typename bit_vector_type = std::uint_fast8_t, typename size_type = std::size_t>
+size_type eval2(cl::sycl::buffer<bit_vector_type, 1>& F_buf,
+               cl::sycl::buffer<bit_vector_type, 1>& sampled_x_buf,
+               cl::sycl::queue& queue) {
+    // Determine the sizes of F and sampled_x
+    const size_type F_size = F_buf.get_count();
+    const size_type num_samples = sampled_x_buf.get_count();
+
+    // Allocate device USM memory for F, sampled_x, and result
+    bit_vector_type* d_F = cl::sycl::malloc_device<bit_vector_type>(F_size, queue);
+    bit_vector_type* d_sampled_x = cl::sycl::malloc_device<bit_vector_type>(num_samples, queue);
+    long* d_result = cl::sycl::malloc_device<long>(1, queue);
+
+    // Initialize result to zero on the device
+    long zero = 0;
+    queue.memcpy(d_result, &zero, sizeof(long));
+
+    // Copy data from host buffers to device USM memory
+    {
+        // Access host data from buffers
+        auto F_host = F_buf.template get_access<cl::sycl::access::mode::read>();
+        auto sampled_x_host = sampled_x_buf.template get_access<cl::sycl::access::mode::read>();
+
+        // Copy data to device
+        queue.memcpy(d_F, F_host.get_pointer(), F_size * sizeof(bit_vector_type));
+        queue.memcpy(d_sampled_x, sampled_x_host.get_pointer(), num_samples * sizeof(bit_vector_type));
+    }
+
+    // Wait for the data transfer to complete
+    queue.wait();
+
+    // Define the kernel execution
+    auto cgf = [&](cl::sycl::handler& cgh) {
+        // Compute the working set splits
+        const auto splits = working_set<>::compute(queue, F_size, num_samples);
+
+        // Allocate local memory within the kernel
+        cl::sycl::local_accessor<bit_vector_type, 1> local_F(splits.F_per_group, cgh);
+        cl::sycl::local_accessor<long, 1> local_sums(cl::sycl::range<1>(1), cgh);
+
+        // Define the execution range
+        const auto globalSize = cl::sycl::range<1>(splits.global_range);
+        const auto localSize = cl::sycl::range<1>(splits.work_group_size);
+        const auto executionRange = cl::sycl::nd_range<1>(globalSize, localSize);
+
+        // Launch the kernel
+        cgh.parallel_for<class sample_eval_kernel>(
+            executionRange,
+            [=](cl::sycl::nd_item<1> item) {
+                const size_t global_id = item.get_global_linear_id();
+                const size_t local_id = item.get_local_linear_id();
+                const size_t group_id = item.get_group_linear_id();
+
+                // Each work-group loads its portion of F into local memory
+                const size_t F_fragment_start = group_id * splits.F_per_group;
+                const size_t F_fragment_end = cl::sycl::min(F_fragment_start + splits.F_per_group, F_size);
+                const size_t F_fragment_size = F_fragment_end - F_fragment_start;
+
+                // Load F into local memory in parallel
+                for (size_t i = local_id; i < F_fragment_size; i += splits.work_group_size) {
+                    local_F[i] = d_F[F_fragment_start + i];
+                }
+
+                // Synchronize to ensure all local_F is loaded
+                item.barrier(cl::sycl::access::fence_space::local_space);
+
+                // Each work-item processes multiple samples
+                size_t sample_start = global_id * splits.samples_per_work_item;
+                size_t sample_end = cl::sycl::min(sample_start + splits.samples_per_work_item, num_samples);
+
+                long local_count = 0;
+
+                for (size_t i = sample_start; i < sample_end; ++i) {
+                    const auto sample = d_sampled_x[i];
+                    auto sample_satisfies_F = 0;
+
+                    // Evaluate the sample over this fragment of F
+                    for (size_t j = 0; j < F_fragment_size; ++j) {
+                        const bool all_true = (sample | local_F[j]) == 0b11111111;
+                        sample_satisfies_F = sample_satisfies_F || all_true;
+                    }
+                    // Increment local count if sample satisfies F
+                    local_count += sample_satisfies_F;
+                }
+
+                // Reduce local counts within the work-group
+                if (local_id == 0) {
+                    local_sums[0] = 0;
+                }
+
+                item.barrier(cl::sycl::access::fence_space::local_space);
+
+                // Atomic add local count to local sum
+                cl::sycl::atomic_ref<long, cl::sycl::memory_order::relaxed,
+                                     cl::sycl::memory_scope::work_group,
+                                     cl::sycl::access::address_space::local_space>
+                    local_sum_atomic(local_sums[0]);
+                local_sum_atomic.fetch_add(local_count);
+
+                item.barrier(cl::sycl::access::fence_space::local_space);
+
+                // Work-group leader updates the global result
+                if (local_id == 0) {
+                    cl::sycl::atomic_ref<long, cl::sycl::memory_order::relaxed,
+                                         cl::sycl::memory_scope::device,
+                                         cl::sycl::access::address_space::global_space>
+                        result_atomic(*d_result);
+                    result_atomic.fetch_add(local_sums[0]);
+                }
+            });
+    };
+
+    // Submit the kernel to the queue
+    queue.submit(cgf);
+    queue.wait();
+
+    // Retrieve the result from the device
+    size_type count = 0;
+    queue.memcpy(&count, d_result, sizeof(long)).wait();
+
+    // Free device USM memory
+    cl::sycl::free(d_F, queue);
+    cl::sycl::free(d_sampled_x, queue);
+    cl::sycl::free(d_result, queue);
+
+    return count;
+}
+
+template <template <typename, typename...> class Container = std::vector,
+          typename bit_vector_type = uint_fast8_t, typename... Args>
+std::size_t eval2(Container<bit_vector_type, Args...>& F,
+                 Container<bit_vector_type, Args...>& sampled_x,
+                 cl::sycl::queue& queue) {
+    // Determine the sizes
+    const std::size_t F_size = F.size();
+    const std::size_t num_samples = sampled_x.size();
+
+    // Allocate device USM memory for F and sampled_x
+    bit_vector_type* d_F = cl::sycl::malloc_shared<bit_vector_type>(F_size, queue);
+    bit_vector_type* d_sampled_x = cl::sycl::malloc_shared<bit_vector_type>(num_samples, queue);
+
+    // Allocate device USM memory for result
+    long* d_result = cl::sycl::malloc_shared<long>(1, queue);
+
+    // Initialize result to zero on the device
+    long zero = 0;
+    queue.memcpy(d_result, &zero, sizeof(long));
+
+    // Copy data from host containers to device USM memory
+    queue.memcpy(d_F, F.data(), F_size * sizeof(bit_vector_type));
+    queue.memcpy(d_sampled_x, sampled_x.data(), num_samples * sizeof(bit_vector_type));
+
+    // Wait for the data transfer to complete
+    queue.wait();
+
+    // Define the kernel execution (same as before but directly using USM pointers)
+    auto cgf = [&](cl::sycl::handler& cgh) {
+        const auto splits = working_set<>::compute(queue, F_size, num_samples);
+        cl::sycl::local_accessor<bit_vector_type, 1> local_F(splits.F_per_group, cgh);
+        cl::sycl::local_accessor<long, 1> local_sums(cl::sycl::range<1>(1), cgh);
+        const auto globalSize = cl::sycl::range<1>(splits.global_range);
+        const auto localSize = cl::sycl::range<1>(splits.work_group_size);
+        const auto executionRange = cl::sycl::nd_range<1>(globalSize, localSize);
+
+        cgh.parallel_for<class sample_eval_kernel>(
+            executionRange,
+            [=](cl::sycl::nd_item<1> item) {
+                const size_t global_id = item.get_global_linear_id();
+                const size_t local_id = item.get_local_linear_id();
+                const size_t group_id = item.get_group_linear_id();
+
+                // Each work-group loads its portion of F into local memory
+                const size_t F_fragment_start = group_id * splits.F_per_group;
+                const size_t F_fragment_end = cl::sycl::min(F_fragment_start + splits.F_per_group, F_size);
+                const size_t F_fragment_size = F_fragment_end - F_fragment_start;
+
+                // Load F into local memory in parallel
+                for (size_t i = local_id; i < F_fragment_size; i += splits.work_group_size) {
+                    local_F[i] = d_F[F_fragment_start + i];
+                }
+
+                // Synchronize to ensure all local_F is loaded
+                item.barrier(cl::sycl::access::fence_space::local_space);
+
+                // Each work-item processes multiple samples
+                size_t sample_start = global_id * splits.samples_per_work_item;
+                size_t sample_end = cl::sycl::min(sample_start + splits.samples_per_work_item, num_samples);
+
+                long local_count = 0;
+
+                for (size_t i = sample_start; i < sample_end; ++i) {
+                    const auto sample = d_sampled_x[i];
+                    auto sample_satisfies_F = 0;
+
+                    // Evaluate the sample over this fragment of F
+                    for (size_t j = 0; j < F_fragment_size; ++j) {
+                        const bool all_true = (sample | local_F[j]) == 0b11111111;
+                        sample_satisfies_F = sample_satisfies_F || all_true;
+                    }
+                    // Increment local count if sample satisfies F
+                    local_count += sample_satisfies_F;
+                }
+
+                // Reduce local counts within the work-group
+                if (local_id == 0) {
+                    local_sums[0] = 0;
+                }
+
+                item.barrier(cl::sycl::access::fence_space::local_space);
+
+                // Atomic add local count to local sum
+                cl::sycl::atomic_ref<long, cl::sycl::memory_order::relaxed,
+                                     cl::sycl::memory_scope::work_group,
+                                     cl::sycl::access::address_space::local_space>
+                    local_sum_atomic(local_sums[0]);
+                local_sum_atomic.fetch_add(local_count);
+
+                item.barrier(cl::sycl::access::fence_space::local_space);
+
+                // Work-group leader updates the global result
+                if (local_id == 0) {
+                    cl::sycl::atomic_ref<long, cl::sycl::memory_order::relaxed,
+                                         cl::sycl::memory_scope::device,
+                                         cl::sycl::access::address_space::global_space>
+                        result_atomic(*d_result);
+                    result_atomic.fetch_add(local_sums[0]);
+                }
+            });
+    };
+
+    // Submit the kernel to the queue
+    queue.submit(cgf);
+    queue.wait();
+
+    // Retrieve the result from the device
+    std::size_t count = 0;
+    queue.memcpy(&count, d_result, sizeof(long)).wait();
+
+    // Free device USM memory
+    cl::sycl::free(d_F, queue);
+    cl::sycl::free(d_sampled_x, queue);
+    cl::sycl::free(d_result, queue);
+
+    return count;
+}
+
+template <typename bit_vector_type = std::uint_fast8_t, typename size_type = std::size_t>
 size_type eval(cl::sycl::buffer<bit_vector_type, 1> &F_buf, cl::sycl::buffer<bit_vector_type, 1> &sampled_x_buf,
                cl::sycl::queue &queue) {
 
