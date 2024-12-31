@@ -5,14 +5,12 @@ set(SAMPLER_HEADERS
 )
 
 set(SAMPLER_SOURCES
-        sampler.cpp
 )
 
 add_library(sampler STATIC ${SAMPLER_HEADERS} ${SAMPLER_SOURCES})
-#target_compile_options(sampler PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_COMPILE_OPTIONS>)
-#target_include_directories(sampler PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_INCLUDE_DIRECTORIES>)
-#target_link_libraries(sampler PUBLIC $<LINK_ONLY:MKL::MKL>)
-#add_sycl_to_target(TARGET sampler SOURCES ${SAMPLER_HEADERS} ${SAMPLER_SOURCES})
+set_target_properties(sampler PROPERTIES LINKER_LANGUAGE CXX)
+target_include_directories(sampler PUBLIC ${OpenMP_CXX_INCLUDE_DIRS})
+target_link_libraries(sampler PUBLIC ${OpenMP_CXX_LIBRARIES})
 
 install(TARGETS sampler
         RUNTIME DESTINATION lib/canopy)
