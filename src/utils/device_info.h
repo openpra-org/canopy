@@ -1,12 +1,11 @@
-#ifndef CANOPY_DEVICE_INFO_H
-#define CANOPY_DEVICE_INFO_H
+#pragma once
 
 #include <CL/sycl.hpp>
-#include <iostream>
 #include <utility>
 #include <vector>
 #include <string>
 
+namespace canopy::utils {
 class DeviceInfo {
 private:
     cl::sycl::device device_;
@@ -41,7 +40,7 @@ public:
 
 // Implementation of helper methods and functions
 
-void DeviceInfo::print_general_info(std::ostream& os) const {
+inline void DeviceInfo::print_general_info(std::ostream &os) const {
     os << "General Information:\n";
     try {
         os << "  Device Name: " << device_.get_info<cl::sycl::info::device::name>() << "\n";
@@ -50,32 +49,51 @@ void DeviceInfo::print_general_info(std::ostream& os) const {
         os << "  Profile: " << device_.get_info<cl::sycl::info::device::profile>() << "\n";
         os << "  Version: " << device_.get_info<cl::sycl::info::device::version>() << "\n";
         os << "  OpenCL C Version: " << device_.get_info<cl::sycl::info::device::opencl_c_version>() << "\n";
-        os << "  Device Type: " << device_type_to_string(device_.get_info<cl::sycl::info::device::device_type>()) << "\n";
+        os << "  Device Type: " << device_type_to_string(device_.get_info<cl::sycl::info::device::device_type>())
+           << "\n";
         os << "  Vendor ID: " << device_.get_info<cl::sycl::info::device::vendor_id>() << "\n";
-        os << "  Platform: " << device_.get_info<cl::sycl::info::device::platform>().get_info<cl::sycl::info::platform::name>() << "\n";
+        os << "  Platform: "
+           << device_.get_info<cl::sycl::info::device::platform>().get_info<cl::sycl::info::platform::name>() << "\n";
         os << "  Is Available: " << std::boolalpha << device_.get_info<cl::sycl::info::device::is_available>() << "\n";
-        os << "  Is Compiler Available: " << std::boolalpha << device_.get_info<cl::sycl::info::device::is_compiler_available>() << "\n";
-        os << "  Is Linker Available: " << std::boolalpha << device_.get_info<cl::sycl::info::device::is_linker_available>() << "\n";
+        os << "  Is Compiler Available: " << std::boolalpha
+           << device_.get_info<cl::sycl::info::device::is_compiler_available>() << "\n";
+        os << "  Is Linker Available: " << std::boolalpha
+           << device_.get_info<cl::sycl::info::device::is_linker_available>() << "\n";
         os << "  Reference Count: " << device_.get_info<cl::sycl::info::device::reference_count>() << "\n";
 
         os << "  Available Extensions:\n";
-        for (const auto& ext : device_.get_info<cl::sycl::info::device::extensions>()) {
+        for (const auto &ext : device_.get_info<cl::sycl::info::device::extensions>()) {
             os << "    " << ext << "\n";
         }
-    } catch (const cl::sycl::exception& e) {
+    } catch (const cl::sycl::exception &e) {
         os << "  [Error retrieving general information: " << e.what() << "]\n";
     }
 }
-void DeviceInfo::print_compute_info(std::ostream& os) const {
+inline void DeviceInfo::print_compute_info(std::ostream &os) const {
     os << "Compute Unit Information:\n";
     try {
         os << "  Max Compute Units: " << device_.get_info<cl::sycl::info::device::max_compute_units>() << "\n";
-        os << "  Max Work Item Dimensions: " << device_.get_info<cl::sycl::info::device::max_work_item_dimensions>() << "\n";
+        os << "  Max Work Item Dimensions: " << device_.get_info<cl::sycl::info::device::max_work_item_dimensions>()
+           << "\n";
 
-        auto max_work_item_sizes = device_.get_info<cl::sycl::info::device::max_work_item_sizes<3>>();
-        os << "  Max Work Item Sizes: ";
-        for (auto i=0; i<3; i++) {
-            os << max_work_item_sizes[i] << " ";
+        const auto max_work_item_sizes_1d = device_.get_info<cl::sycl::info::device::max_work_item_sizes<1>>();
+        os << "  Max Work Item Sizes [1D]: ";
+        for (auto i = 0; i < 1; i++) {
+            os << max_work_item_sizes_1d[i] << " ";
+        }
+        os << "\n";
+
+        const auto max_work_item_sizes_2d = device_.get_info<cl::sycl::info::device::max_work_item_sizes<2>>();
+        os << "  Max Work Item Sizes [2D]: ";
+        for (auto i = 0; i < 2; i++) {
+            os << max_work_item_sizes_2d[i] << " ";
+        }
+        os << "\n";
+
+        const auto max_work_item_sizes_3d = device_.get_info<cl::sycl::info::device::max_work_item_sizes<3>>();
+        os << "  Max Work Item Sizes [3D]: ";
+        for (auto i = 0; i < 3; i++) {
+            os << max_work_item_sizes_3d[i] << " ";
         }
         os << "\n";
 
@@ -83,13 +101,12 @@ void DeviceInfo::print_compute_info(std::ostream& os) const {
 
         auto sub_group_sizes = device_.get_info<cl::sycl::info::device::sub_group_sizes>();
         os << "  Sub-group Sizes: ";
-        for (const auto& size : sub_group_sizes) {
+        for (const auto &size : sub_group_sizes) {
             os << size << " ";
         }
         os << std::endl;
         os << "  Sub-group Independent Forward Progress: " << std::boolalpha
            << device_.get_info<cl::sycl::info::device::sub_group_independent_forward_progress>() << "\n";
-
 
         os << "  Max Work Group Size: " << device_.get_info<cl::sycl::info::device::max_work_group_size>() << "\n";
         os << "  Preferred Vector Widths:\n";
@@ -114,59 +131,77 @@ void DeviceInfo::print_compute_info(std::ostream& os) const {
         os << "  Address Bits: " << device_.get_info<cl::sycl::info::device::address_bits>() << "\n";
         os << "  Max Samplers: " << device_.get_info<cl::sycl::info::device::max_samplers>() << "\n";
         os << "  Max Parameter Size: " << device_.get_info<cl::sycl::info::device::max_parameter_size>() << "\n";
-        os << "  Mem Base Address Align: " << device_.get_info<cl::sycl::info::device::mem_base_addr_align>() << " bits\n";
-        os << "  Profiling Timer Resolution: " << device_.get_info<cl::sycl::info::device::profiling_timer_resolution>() << "\n";
-        os << "  Endian Little: " << std::boolalpha << device_.get_info<cl::sycl::info::device::is_endian_little>() << "\n";
+        os << "  Mem Base Address Align: " << device_.get_info<cl::sycl::info::device::mem_base_addr_align>()
+           << " bits\n";
+        os << "  Profiling Timer Resolution: " << device_.get_info<cl::sycl::info::device::profiling_timer_resolution>()
+           << "\n";
+        os << "  Endian Little: " << std::boolalpha << device_.get_info<cl::sycl::info::device::is_endian_little>()
+           << "\n";
         os << "\n";
 
-    } catch (const cl::sycl::exception& e) {
+    } catch (const cl::sycl::exception &e) {
         os << "  [Error retrieving compute information: " << e.what() << "]\n";
     }
 }
 
-void DeviceInfo::print_memory_info(std::ostream& os) const {
+inline void DeviceInfo::print_memory_info(std::ostream &os) const {
     os << "Memory Information:\n";
     try {
-        os << "  Global Memory Size: " << device_.get_info<cl::sycl::info::device::global_mem_size>() / (1024 * 1024) << " MB\n";
-        os << "  Max Memory Allocation Size: " << device_.get_info<cl::sycl::info::device::max_mem_alloc_size>() / (1024 * 1024) << " MB\n";
+        os << "  Global Memory Size: " << device_.get_info<cl::sycl::info::device::global_mem_size>() / (1024 * 1024)
+           << " MB\n";
+        os << "  Max Memory Allocation Size: "
+           << device_.get_info<cl::sycl::info::device::max_mem_alloc_size>() / (1024 * 1024) << " MB\n";
         os << "  Local Memory Size: " << device_.get_info<cl::sycl::info::device::local_mem_size>() / 1024 << " KB\n";
-        os << "  Local Memory Type: " << local_mem_type_to_string(device_.get_info<cl::sycl::info::device::local_mem_type>()) << "\n";
-        os << "  Error Correction Support: " << std::boolalpha << device_.get_info<cl::sycl::info::device::error_correction_support>() << "\n";
-        os << "  Host Unified Memory: " << std::boolalpha << device_.get_info<cl::sycl::info::device::host_unified_memory>() << "\n";
+        os << "  Local Memory Type: "
+           << local_mem_type_to_string(device_.get_info<cl::sycl::info::device::local_mem_type>()) << "\n";
+        os << "  Error Correction Support: " << std::boolalpha
+           << device_.get_info<cl::sycl::info::device::error_correction_support>() << "\n";
+        os << "  Host Unified Memory: " << std::boolalpha
+           << device_.get_info<cl::sycl::info::device::host_unified_memory>() << "\n";
 
-        os << "  Global Memory Cache Type: " << global_mem_cache_type_to_string(device_.get_info<cl::sycl::info::device::global_mem_cache_type>()) << "\n";
-        os << "  Global Memory Cache Line Size: " << device_.get_info<cl::sycl::info::device::global_mem_cache_line_size>() << "\n";
-        os << "  Global Memory Cache Size: " << device_.get_info<cl::sycl::info::device::global_mem_cache_size>() / 1024 << " KB\n";
-        os << "  Max Constant Buffer Size: " << device_.get_info<cl::sycl::info::device::max_constant_buffer_size>() / 1024 << " KB\n";
+        os << "  Global Memory Cache Type: "
+           << global_mem_cache_type_to_string(device_.get_info<cl::sycl::info::device::global_mem_cache_type>())
+           << "\n";
+        os << "  Global Memory Cache Line Size: "
+           << device_.get_info<cl::sycl::info::device::global_mem_cache_line_size>() << "\n";
+        os << "  Global Memory Cache Size: " << device_.get_info<cl::sycl::info::device::global_mem_cache_size>() / 1024
+           << " KB\n";
+        os << "  Max Constant Buffer Size: "
+           << device_.get_info<cl::sycl::info::device::max_constant_buffer_size>() / 1024 << " KB\n";
         os << "  Max Constant Args: " << device_.get_info<cl::sycl::info::device::max_constant_args>() << "\n";
         os << "  Printf Buffer Size: " << device_.get_info<cl::sycl::info::device::printf_buffer_size>() << "\n";
-        os << "  Preferred Interop User Sync: " << std::boolalpha << device_.get_info<cl::sycl::info::device::preferred_interop_user_sync>() << "\n";
-    } catch (const cl::sycl::exception& e) {
+        os << "  Preferred Interop User Sync: " << std::boolalpha
+           << device_.get_info<cl::sycl::info::device::preferred_interop_user_sync>() << "\n";
+    } catch (const cl::sycl::exception &e) {
         os << "  [Error retrieving memory information: " << e.what() << "]\n";
     }
 }
 
-void DeviceInfo::print_image_info(std::ostream& os) const {
+inline void DeviceInfo::print_image_info(std::ostream &os) const {
     os << "Image Support Information:\n";
     try {
-        os << "  Image Support: " << std::boolalpha << device_.get_info<cl::sycl::info::device::image_support>() << "\n";
+        os << "  Image Support: " << std::boolalpha << device_.get_info<cl::sycl::info::device::image_support>()
+           << "\n";
         if (device_.get_info<cl::sycl::info::device::image_support>()) {
             os << "  Max Read Image Args: " << device_.get_info<cl::sycl::info::device::max_read_image_args>() << "\n";
-            os << "  Max Write Image Args: " << device_.get_info<cl::sycl::info::device::max_write_image_args>() << "\n";
+            os << "  Max Write Image Args: " << device_.get_info<cl::sycl::info::device::max_write_image_args>()
+               << "\n";
             os << "  Image2D Max Width: " << device_.get_info<cl::sycl::info::device::image2d_max_width>() << "\n";
             os << "  Image2D Max Height: " << device_.get_info<cl::sycl::info::device::image2d_max_height>() << "\n";
             os << "  Image3D Max Width: " << device_.get_info<cl::sycl::info::device::image3d_max_width>() << "\n";
             os << "  Image3D Max Height: " << device_.get_info<cl::sycl::info::device::image3d_max_height>() << "\n";
             os << "  Image3D Max Depth: " << device_.get_info<cl::sycl::info::device::image3d_max_depth>() << "\n";
-            os << "  Image Max Buffer Size: " << device_.get_info<cl::sycl::info::device::image_max_buffer_size>() << "\n";
-            os << "  Image Max Array Size: " << device_.get_info<cl::sycl::info::device::image_max_array_size>() << "\n";
+            os << "  Image Max Buffer Size: " << device_.get_info<cl::sycl::info::device::image_max_buffer_size>()
+               << "\n";
+            os << "  Image Max Array Size: " << device_.get_info<cl::sycl::info::device::image_max_array_size>()
+               << "\n";
         }
-    } catch (const cl::sycl::exception& e) {
+    } catch (const cl::sycl::exception &e) {
         os << "  [Error retrieving image information: " << e.what() << "]\n";
     }
 }
 
-void DeviceInfo::print_fp_config_info(std::ostream& os) const {
+inline void DeviceInfo::print_fp_config_info(std::ostream& os) const {
     os << "Floating Point Configurations:\n";
     try {
         os << "  Half Precision FP Configurations:\n";
@@ -196,56 +231,62 @@ void DeviceInfo::print_fp_config_info(std::ostream& os) const {
     }
 }
 
-void DeviceInfo::print_aspect_info(std::ostream& os) const {
+inline void DeviceInfo::print_aspect_info(std::ostream &os) const {
     os << "Aspects Supported:\n";
     try {
-        for (const auto& aspect : device_.get_info<cl::sycl::info::device::aspects>()) {
+        for (const auto &aspect : device_.get_info<cl::sycl::info::device::aspects>()) {
             os << "  " << aspect_to_string(aspect) << "\n";
         }
-    } catch (const cl::sycl::exception& e) {
+    } catch (const cl::sycl::exception &e) {
         os << "  [Error retrieving aspect information: " << e.what() << "]\n";
     }
 }
 
-void DeviceInfo::print_execution_capabilities_info(std::ostream& os) const {
+inline void DeviceInfo::print_execution_capabilities_info(std::ostream &os) const {
     os << "Execution Capabilities:\n";
     try {
-        for (const auto& cap : device_.get_info<cl::sycl::info::device::execution_capabilities>()) {
+        for (const auto &cap : device_.get_info<cl::sycl::info::device::execution_capabilities>()) {
             os << "  " << execution_capability_to_string(cap) << "\n";
         }
-        os << "  Queue Profiling: " << std::boolalpha << device_.get_info<cl::sycl::info::device::queue_profiling>() << "\n";
+        os << "  Queue Profiling: " << std::boolalpha << device_.get_info<cl::sycl::info::device::queue_profiling>()
+           << "\n";
         os << "  Built-in Kernels:\n";
-        for (const auto& kernel : device_.get_info<cl::sycl::info::device::built_in_kernels>()) {
+        for (const auto &kernel : device_.get_info<cl::sycl::info::device::built_in_kernels>()) {
             os << "    " << kernel << "\n";
         }
-    } catch (const cl::sycl::exception& e) {
+    } catch (const cl::sycl::exception &e) {
         os << "  [Error retrieving execution capabilities: " << e.what() << "]\n";
     }
 }
 
-void DeviceInfo::print_partition_info(std::ostream& os) const {
+inline void DeviceInfo::print_partition_info(std::ostream &os) const {
     os << "Partition Information:\n";
     try {
-        os << "  Partition Max Sub-devices: " << device_.get_info<cl::sycl::info::device::partition_max_sub_devices>() << "\n";
+        os << "  Partition Max Sub-devices: " << device_.get_info<cl::sycl::info::device::partition_max_sub_devices>()
+           << "\n";
 
         os << "  Partition Properties:\n";
-        for (const auto& prop : device_.get_info<cl::sycl::info::device::partition_properties>()) {
+        for (const auto &prop : device_.get_info<cl::sycl::info::device::partition_properties>()) {
             os << "    " << partition_property_to_string(prop) << "\n";
         }
 
         os << "  Partition Affinity Domains:\n";
-        for (const auto& domain : device_.get_info<cl::sycl::info::device::partition_affinity_domains>()) {
+        for (const auto &domain : device_.get_info<cl::sycl::info::device::partition_affinity_domains>()) {
             os << "    " << partition_affinity_domain_to_string(domain) << "\n";
         }
 
-        os << "  Partition Type Property: " << partition_property_to_string(device_.get_info<cl::sycl::info::device::partition_type_property>()) << "\n";
-        os << "  Partition Type Affinity Domain: " << partition_affinity_domain_to_string(device_.get_info<cl::sycl::info::device::partition_type_affinity_domain>()) << "\n";
-    } catch (const cl::sycl::exception& e) {
+        os << "  Partition Type Property: "
+           << partition_property_to_string(device_.get_info<cl::sycl::info::device::partition_type_property>()) << "\n";
+        os << "  Partition Type Affinity Domain: "
+           << partition_affinity_domain_to_string(
+                  device_.get_info<cl::sycl::info::device::partition_type_affinity_domain>())
+           << "\n";
+    } catch (const cl::sycl::exception &e) {
         os << "  [Error retrieving partition information: " << e.what() << "]\n";
     }
 }
 
-void DeviceInfo::print_other_info(std::ostream& os) const {
+inline void DeviceInfo::print_other_info(std::ostream& os) const {
     os << "Other Information:\n";
     try {
         // Query parent device if applicable
@@ -258,33 +299,49 @@ void DeviceInfo::print_other_info(std::ostream& os) const {
 
 
 // Helper functions to convert enums to strings
-std::string DeviceInfo::device_type_to_string(cl::sycl::info::device_type type) {
+inline std::string DeviceInfo::device_type_to_string(cl::sycl::info::device_type type) {
     switch (type) {
-        case cl::sycl::info::device_type::cpu: return "CPU";
-        case cl::sycl::info::device_type::gpu: return "GPU";
-        case cl::sycl::info::device_type::accelerator: return "Accelerator";
-        case cl::sycl::info::device_type::custom: return "Custom";
-        case cl::sycl::info::device_type::automatic: return "Automatic";
-        case cl::sycl::info::device_type::host: return "Host";
-        default: return "Unknown";
+    case cl::sycl::info::device_type::cpu:
+        return "CPU";
+    case cl::sycl::info::device_type::gpu:
+        return "GPU";
+    case cl::sycl::info::device_type::accelerator:
+        return "Accelerator";
+    case cl::sycl::info::device_type::custom:
+        return "Custom";
+    case cl::sycl::info::device_type::automatic:
+        return "Automatic";
+    case cl::sycl::info::device_type::host:
+        return "Host";
+    default:
+        return "Unknown";
     }
 }
 
-std::string DeviceInfo::fp_config_to_string(cl::sycl::info::fp_config config) {
+inline std::string DeviceInfo::fp_config_to_string(cl::sycl::info::fp_config config) {
     switch (config) {
-        case cl::sycl::info::fp_config::denorm: return "denorm";
-        case cl::sycl::info::fp_config::inf_nan: return "inf_nan";
-        case cl::sycl::info::fp_config::round_to_nearest: return "round_to_nearest";
-        case cl::sycl::info::fp_config::round_to_zero: return "round_to_zero";
-        case cl::sycl::info::fp_config::round_to_inf: return "round_to_inf";
-        case cl::sycl::info::fp_config::fma: return "fma";
-        case cl::sycl::info::fp_config::correctly_rounded_divide_sqrt: return "correctly_rounded_divide_sqrt";
-        case cl::sycl::info::fp_config::soft_float: return "soft_float";
-        default: return "unknown_fp_config";
+    case cl::sycl::info::fp_config::denorm:
+        return "denorm";
+    case cl::sycl::info::fp_config::inf_nan:
+        return "inf_nan";
+    case cl::sycl::info::fp_config::round_to_nearest:
+        return "round_to_nearest";
+    case cl::sycl::info::fp_config::round_to_zero:
+        return "round_to_zero";
+    case cl::sycl::info::fp_config::round_to_inf:
+        return "round_to_inf";
+    case cl::sycl::info::fp_config::fma:
+        return "fma";
+    case cl::sycl::info::fp_config::correctly_rounded_divide_sqrt:
+        return "correctly_rounded_divide_sqrt";
+    case cl::sycl::info::fp_config::soft_float:
+        return "soft_float";
+    default:
+        return "unknown_fp_config";
     }
 }
 
-std::string DeviceInfo::aspect_to_string(cl::sycl::aspect aspect) {
+inline std::string DeviceInfo::aspect_to_string(cl::sycl::aspect aspect) {
     switch (aspect) {
         case cl::sycl::aspect::cpu: return "cpu";
         case cl::sycl::aspect::gpu: return "gpu";
@@ -309,7 +366,7 @@ std::string DeviceInfo::aspect_to_string(cl::sycl::aspect aspect) {
     }
 }
 
-std::string DeviceInfo::execution_capability_to_string(cl::sycl::info::execution_capability cap) {
+inline std::string DeviceInfo::execution_capability_to_string(cl::sycl::info::execution_capability cap) {
     switch (cap) {
         case cl::sycl::info::execution_capability::exec_kernel: return "exec_kernel";
         case cl::sycl::info::execution_capability::exec_native_kernel: return "exec_native_kernel";
@@ -317,7 +374,7 @@ std::string DeviceInfo::execution_capability_to_string(cl::sycl::info::execution
     }
 }
 
-std::string DeviceInfo::local_mem_type_to_string(cl::sycl::info::local_mem_type type) {
+inline std::string DeviceInfo::local_mem_type_to_string(cl::sycl::info::local_mem_type type) {
     switch (type) {
         case cl::sycl::info::local_mem_type::none: return "none";
         case cl::sycl::info::local_mem_type::local: return "local";
@@ -326,7 +383,7 @@ std::string DeviceInfo::local_mem_type_to_string(cl::sycl::info::local_mem_type 
     }
 }
 
-std::string DeviceInfo::global_mem_cache_type_to_string(cl::sycl::info::global_mem_cache_type type) {
+inline std::string DeviceInfo::global_mem_cache_type_to_string(cl::sycl::info::global_mem_cache_type type) {
     switch (type) {
         case cl::sycl::info::global_mem_cache_type::none: return "none";
         case cl::sycl::info::global_mem_cache_type::read_only: return "read_only";
@@ -335,7 +392,7 @@ std::string DeviceInfo::global_mem_cache_type_to_string(cl::sycl::info::global_m
     }
 }
 
-std::string DeviceInfo::partition_property_to_string(cl::sycl::info::partition_property prop) {
+inline std::string DeviceInfo::partition_property_to_string(cl::sycl::info::partition_property prop) {
     switch (prop) {
         case cl::sycl::info::partition_property::no_partition: return "no_partition";
         case cl::sycl::info::partition_property::partition_equally: return "partition_equally";
@@ -345,7 +402,7 @@ std::string DeviceInfo::partition_property_to_string(cl::sycl::info::partition_p
     }
 }
 
-std::string DeviceInfo::partition_affinity_domain_to_string(cl::sycl::info::partition_affinity_domain domain) {
+inline std::string DeviceInfo::partition_affinity_domain_to_string(cl::sycl::info::partition_affinity_domain domain) {
     switch (domain) {
         case cl::sycl::info::partition_affinity_domain::not_applicable: return "not_applicable";
         case cl::sycl::info::partition_affinity_domain::numa: return "numa";
@@ -359,7 +416,7 @@ std::string DeviceInfo::partition_affinity_domain_to_string(cl::sycl::info::part
 }
 
 // Overloaded operator<< implementation
-std::ostream& operator<<(std::ostream& os, const DeviceInfo& d) {
+inline std::ostream& operator<<(std::ostream& os, const DeviceInfo& d) {
     os << "Device Information:\n";
     d.print_general_info(os);
     os << "\n";
@@ -380,5 +437,4 @@ std::ostream& operator<<(std::ostream& os, const DeviceInfo& d) {
     d.print_other_info(os);
     return os;
 }
-
-#endif //CANOPY_DEVICE_INFO_H
+}

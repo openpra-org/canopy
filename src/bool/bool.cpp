@@ -56,9 +56,9 @@ static constexpr const std::size_t F_size = m_products * n_duplicates;
  * @note Probabilities of variables (events) in expression F.
  */
 static const known_event_probabilities Px = {
-        1e-3, ///< P(a)
-        1e-4, ///< P(b)
-        1e-5  ///< P(c)
+        0.5, ///< P(a)
+        0.5, ///< P(b)
+        0.5  ///< P(c)
 };
 
 /**
@@ -301,17 +301,17 @@ int main() {
 
     std::cout << canopy::utils::Profiler([&]() {
         sample_and_assign_truth_values(Px, sampled_x);
-    }, 5, 0, "generate random number vector, num_samples=1e9, float32").run();
+    }, 1, 0, "generate random number vector, num_samples=1e9, float32").run();
 
     cl::sycl::queue queue;
     auto dev = queue.get_device();
-    auto device_info = DeviceInfo(dev);
+    auto device_info = canopy::utils::DeviceInfo(dev);
     std::cout<<device_info<<std::endl;
 
     size_t count = 0;
 
     const auto profiler = canopy::utils::Profiler([&]() {
-        count = canopy::eval(F, sampled_x, queue);
+        count = canopy::eval2(F, sampled_x, queue);
     }, 5, 0, "Optimized evaluation of F with blocking").run();
     const auto known_P = compute_exact_prob_F<tally_float_type>(Px);
     std::cout << std::setprecision(15) << std::scientific;

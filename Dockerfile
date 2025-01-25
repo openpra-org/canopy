@@ -108,6 +108,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
 FROM llvm-clang AS oneapi-clang
 #ENV INTEL_ONEAPI_OPENCL_PACKAGES="intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 ocl-icd-libopencl1 ocl-icd-opencl-dev intel-oneapi-runtime-dpcpp* intel-oneapi-runtime-opencl*"
 ENV INTEL_ONEAPI_OPENCL_PACKAGES="intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 ocl-icd-libopencl1 ocl-icd-opencl-dev"
+ENV INTEL_ONEAPI_MKL_PACKAGES="intel-oneapi-mkl intel-oneapi-mkl-devel"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
@@ -115,7 +116,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null && \
     echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | tee /etc/apt/sources.list.d/oneAPI.list && \
     apt-fast update && \
-    apt-fast install -y --no-install-recommends $INTEL_ONEAPI_OPENCL_PACKAGES
+    apt-fast install -y --no-install-recommends $INTEL_ONEAPI_OPENCL_PACKAGES $INTEL_ONEAPI_MKL_PACKAGES
 
 ## Download Intel Level Zero & Compute Runtime
 FROM hobbsau/aria2 AS intel-lz-debs

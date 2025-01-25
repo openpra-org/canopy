@@ -1,0 +1,158 @@
+namespace canopy.io;
+
+file_identifier "CPY1"; // This corresponds to the version (1).
+file_extension "cnpy"; // File extension of any written files.
+
+enum TensorType: ubyte {
+  UINT4  = 0x04, // 0b 0000 0100
+  UINT8  = 0x08, // 0b 0000 1000
+  UINT16 = 0x10, // 0b 0001 0000
+  UINT32 = 0x00, // 0b 0000 0000 <---- DEFAULT
+  UINT64 = 0x40, // 0b 0100 0000
+
+  FLOAT16 = 0x90, // 0b 1001 0000
+  FLOAT32 = 0xA0, // 0b 1010 0000
+  FLOAT64 = 0xC0, // 0b 1100 0000
+}
+
+table Tensor {
+  // The tensor shape, assuming rank is always non-null
+  shape:[int32]; // signed int32, -1 represents dynamically computed dimension size, helpful for reduction / broadcast ops
+  type:TensorType;
+  // An index that refers to the buffers table at the root of the model. Or,
+  // if there is no data buffer associated (i.e. intermediate results), then
+  // this is 0 (which refers to an always existent empty buffer).
+  //
+  // The data_buffer itself is an opaque container, with the assumption that the
+  // target device is little-endian. In addition, all builtin operators assume
+  // the memory is ordered such that if `shape` is [4, 3, 2], then index
+  // [i, j, k] maps to data_buffer[i*3*2 + j*2 + k].
+  buffer_idx:uint32;
+  name:string; // optional; for debugging
+}
+
+// About endian-ness
+// the address of a multi-byte value is the address of its first byte (the byte with the lowest address);
+// little-endian systems of that type have the property that, for sufficiently low data values, the same value can be
+// read from memory at different lengths without using different addresses (even when alignment restrictions are
+// imposed). For example, a 32-bit memory location with content 4A 00 00 00 can be read at the same address as either
+// 8-bit (value = 4A), 16-bit (004A), 24-bit (00004A), or 32-bit (0000004A), all of which retain the same numeric value.
+
+
+enum OpCode : ubyte {
+    // bitwise -----------------> 0___ ____
+    BITWISE_NOT     = 0x00, // 0b 0000 0000
+    BITWISE_AND     = 0x01, // 0b 0000 0001
+    BITWISE_OR      = 0x02, // 0b 0000 0010
+    BITWISE_XOR     = 0x04, // 0b 0000 0100
+    BITWISE_K_OF_N  = 0x05, // 0b 0000 0101
+    // negations ---------------> ____ 1___
+    BITWISE_NAND    = 0x09, // 0b 0000 1001
+    BITWISE_NOR     = 0x0A, // 0b 0000 1010
+    BITWISE_XNOR    = 0x0C, // 0b 0000 1100
+    // masking
+    BITMASK_ZEROS   = 0x10, // 0b 0001 0000
+    BITMASK_ONES    = 0x11, // 0b 0001 0001
+    // convolution
+    BITWISE_CONV_ND = 0x20, // 0b 0010 0000
+    BITWISE_CONV_1D = 0x21, // 0b 0010 0001
+    BITWISE_CONV_2D = 0x22, // 0b 0010 0010
+    // fft
+    BITWISE_FFT_ND  = 0x40, // 0b 0100 0000
+    BITWISE_FFT_1D  = 0x41, // 0b 0100 0001
+    BITWISE_FFT_2D  = 0x42, // 0b 0100 0010
+
+    // Reduction Ops
+
+    // logical ----------------> 1___ ____
+    LOGICAL_NOT    = 0x80, // 0b 1000 0000
+    LOGICAL_AND    = 0x81, // 0b 1000 0001
+    LOGICAL_OR     = 0x82, // 0b 1000 0010
+    LOGICAL_XOR    = 0x84, // 0b 1000 0100
+    // negations --------------> ____ 1___
+    LOGICAL_NAND   = 0x89, // 0b 1000 1001
+    LOGICAL_NOR    = 0x8A, // 0b 1000 1010
+    LOGICAL_XNOR   = 0x8C, // 0b 1000 1100
+
+    // compute the expected value and variational loss
+    MC_EXPECT_VAL   = 0xF0, // 0b 1111 0000
+    MC_VAR_LOSS     = 0xF1, // 0b 1111 0001
+
+    // helper ops
+    RESHAPE         = 0xA0, // 0b 1010 0000
+    // CALL, // call an operation (reference to another operation) may break DAGiness
+
+    // probability helpers
+    //PROB_SAMPLE_UNIFORM = 0x50, // 0b 0101 0000
+}
+
+table KofNArgs {
+  atleast: uint32 = 0;
+}
+
+table MonteCarloExpectedValueOptions {
+  ci_low: float32  = 0.05;
+  ci_high: float32 = 0.95;
+}
+
+table ReshapeArgs {
+  new_shape:[int32];
+}
+
+union OperatorArgs {
+    KofNArgs,
+    ReshapeArgs,
+    MonteCarloExpectedValueOptions,
+}
+
+// An operator takes tensors as inputs and outputs. The type of operation being
+// performed is determined by the OpCode
+table Operator {
+  opcode: OpCode;
+  args: OperatorArgs;
+  inputs:[int32];
+  outputs:[int32];
+  name: string;  // optional
+}
+
+// The root type, defining a model.
+table SubGraph {
+  // A list of all tensors used in this model.
+  tensors:[Tensor];
+
+  // Indices of the input tensors.
+  inputs:[int32];
+
+  // Indices of the output tensors.
+  outputs:[int32];
+
+  // All operators, in execution order.
+  operators:[Operator];
+
+  // Name of subgraph (used for debugging).
+  name:string;
+}
+
+// Table of raw data buffers (used for constant tensors). Referenced by tensors
+// by index. The generous alignment accommodates mmap-friendly data structures.
+table Buffer {
+  data:[ubyte]; //(force_align: 16); 16 * sizeof(byte) = 128 bits
+}
+
+table DAGs {
+  // All the subgraphs of the model. The 0th is assumed to be the main
+  // model.
+  subgraphs:[SubGraph];
+
+  // Buffers of the model.
+  // NOTE: It is required that the first entry in here is always an empty
+  // buffer. This is so that the default buffer index of zero in Tensor
+  // will always refer to a valid empty buffer.
+  buffers:[Buffer];
+
+  // optional name and description of the model.
+  name: string;
+  description: string;
+}
+
+root_type DAGs;

@@ -6,7 +6,6 @@ set(UTILS_HEADERS
         profile.h
         profiler.h
         stopwatch.h
-        bits.h
         types.h
         device_info.h
 )

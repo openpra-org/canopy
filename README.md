@@ -1,6 +1,14 @@
 # canopy
 platform-independent sparse matrix library for quantifying large PRA models
 
+## Setup & Install
+This project uses git submodules. Begin by cloning recursively, or initializing and updating the repo.
+```shell
+git clone --recursive git@github.com:openpra-org/canopy.git
+```
+```shell
+git submodule update --init --recursive
+```
 
 ## Development
 
@@ -27,16 +35,14 @@ docker run -d \
   --device=/dev/dri \
   --device=/dev/kfd \
   --cap-add=ALL \
+  --security-opt seccomp=unconfined \
+  --group-add video \
+  canopy:ssh-debugger
   canopy:ssh-debugger
 ```
 
 ```bash
-docker run -d \
-  --name=canopy-dev \
-  -p 2222:2222 \
-  --device=/dev/dri \
-  --cap-add=ALL \
-  canopy:ssh-debugger
+oder
 ```
 
 ### Develop on macOS

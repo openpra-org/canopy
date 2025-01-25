@@ -16,11 +16,11 @@
 namespace canopy {
 
     static constexpr size_t TARGET_OCCUPANCY_RATE_OPENCL_CPU(const size_t threads = 1) {
-        return static_cast<size_t>(6400.0 * std::pow((128.0 / threads), 4.0/3.0));
+        return static_cast<size_t>(6400.0 * std::pow((128.0 / static_cast<double_t>(threads)), 4.0/3.0));
     }
 
     static constexpr size_t TARGET_OCCUPANCY_RATE_OPENMP(const size_t threads = 1) {
-        return static_cast<size_t>(2.0 * TARGET_OCCUPANCY_RATE_OPENCL_CPU(threads));
+        return static_cast<size_t>(2 * TARGET_OCCUPANCY_RATE_OPENCL_CPU(threads));
     }
 
     static constexpr size_t TARGET_OCCUPANCY_RATE_CUDA(const size_t threads = 1) {
