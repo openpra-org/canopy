@@ -1,6 +1,6 @@
 job("canopy-ci") {
 
-    val registry = "packages.space.openpra.org/p/openpra/containers/"
+    val registry = "packages-space.openpra.org/p/openpra/containers/"
     val image = "canopy"
     val remote = "$registry$image"
 
