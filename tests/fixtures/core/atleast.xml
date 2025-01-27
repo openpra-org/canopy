@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<opsa-mef>
+  <define-fault-tree name="Atleast">
+    <define-gate name="TopEvent">
+      <atleast min="2">
+        <event name="A" type="basic-event"/>
+        <event name="B" type="basic-event"/>
+        <event name="C" type="basic-event"/>
+        <event name="G2" type="gate"/>
+        <event name="G3" type="gate"/>
+        <event name="G4" type="gate"/>
+      </atleast>
+    </define-gate>
+    <define-gate name="G2">
+      <atleast min="3">
+        <event name="A" type="basic-event"/>
+        <event name="B" type="basic-event"/>
+        <event name="C" type="basic-event"/>
+        <event name="D" type="basic-event"/>
+      </atleast>
+    </define-gate>
+    <define-gate name="G3">
+      <atleast min="2">
+        <event name="D" type="basic-event"/>
+        <event name="E" type="basic-event"/>
+        <event name="A" type="basic-event"/>
+        <event name="G4" type="gate"/>
+      </atleast>
+    </define-gate>
+    <define-gate name="G4">
+      <atleast min="3">
+        <event name="F" type="basic-event"/>
+        <event name="G" type="basic-event"/>
+        <event name="H" type="basic-event"/>
+        <event name="I" type="basic-event"/>
+      </atleast>
+    </define-gate>
+    <define-basic-event name="A">
+      <float value="0.01"/>
+    </define-basic-event>
+    <define-basic-event name="B">
+      <float value="0.02"/>
+    </define-basic-event>
+    <define-basic-event name="C">
+      <float value="0.03"/>
+    </define-basic-event>
+    <define-basic-event name="D">
+      <float value="0.04"/>
+    </define-basic-event>
+    <define-basic-event name="E">
+      <float value="0.1"/>
+    </define-basic-event>
+    <define-basic-event name="F">
+      <float value="0.01"/>
+    </define-basic-event>
+    <define-basic-event name="G">
+      <float value="0.01"/>
+    </define-basic-event>
+    <define-basic-event name="H">
+      <float value="0.01"/>
+    </define-basic-event>
+    <define-basic-event name="I">
+      <float value="0.01"/>
+    </define-basic-event>
+  </define-fault-tree>
+</opsa-mef>

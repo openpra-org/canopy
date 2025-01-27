@@ -1,6 +1,9 @@
-[submodule "external/PRAcciolini"]
-	path = external/PRAcciolini
-	url = https://github.com/openpra-org/PRAcciolini.git
-[submodule "external/flatbuffers"]
-	path = external/flatbuffers
-	url = https://github.com/google/flatbuffers.git
+[submodule "fixtures/synthetic-openpsa-models"]
+	path = fixtures/synthetic-openpsa-models
+	url = https://github.com/openpra-org/synthetic-openpsa-models.git
+[submodule "fixtures/generic-openpsa-models"]
+	path = fixtures/generic-openpsa-models
+	url = https://github.com/openpra-org/generic-openpsa-models.git
+[submodule "fixtures/generic-pwr-openpsa-model"]
+	path = fixtures/generic-pwr-openpsa-model
+	url = https://github.com/openpra-org/generic-pwr-openpsa-model.git
