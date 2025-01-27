@@ -31,7 +31,7 @@
 #include "element.h"
 #include "event.h"
 #include "event_tree.h"
-#include "expression.h"
+#include "scram/expression.h"
 #include "expression/extern.h"
 #include "expression/test_event.h"
 #include "fault_tree.h"

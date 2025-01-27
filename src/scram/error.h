@@ -34,7 +34,7 @@
 #include <boost/exception/info.hpp>
 #include <boost/exception/info_tuple.hpp>
 
-#include "ext/source_info.h"
+#include "scram/ext/source_info.h"
 
 /// Convenience macro to throw SCRAM exceptions.
 /// This is similar to BOOST_THROW_EXCEPTION;

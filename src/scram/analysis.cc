@@ -19,7 +19,7 @@
 /// @file
 /// Implementation of common facilities for all analysis classes.
 
-#include "analysis.h"
+#include "scram/analysis.h"
 
 namespace scram::core {
 

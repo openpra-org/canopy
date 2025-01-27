@@ -25,12 +25,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include "analysis.h"
+#include "scram/analysis.h"
 #include "event.h"
 #include "event_tree.h"
-#include "expression.h"
+#include "scram/expression.h"
 #include "expression/test_event.h"
-#include "settings.h"
+#include "scram/settings.h"
 
 namespace scram::core {
 

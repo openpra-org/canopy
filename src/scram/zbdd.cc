@@ -27,8 +27,8 @@
 
 #include <boost/range/algorithm.hpp>
 
-#include "ext/algorithm.h"
-#include "ext/find_iterator.h"
+#include "scram/ext/algorithm.h"
+#include "scram/ext/find_iterator.h"
 #include "logger.h"
 
 namespace scram::core {

@@ -38,9 +38,9 @@
 #include <boost/multi_index_container.hpp>
 #include <boost/noncopyable.hpp>
 
-#include "error.h"
-#include "ext/linear_set.h"
-#include "ext/multi_index.h"
+#include "scram/error.h"
+#include "scram/ext/linear_set.h"
+#include "scram/ext/multi_index.h"
 
 namespace scram::mef {
 

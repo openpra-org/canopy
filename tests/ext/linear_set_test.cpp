@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
 #include <vector>
-#include "ext/linear_set.h"
+#include "scram/ext/linear_set.h"
 
 BOOST_AUTO_TEST_SUITE(linear_set_suite)
 

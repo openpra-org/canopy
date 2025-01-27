@@ -4,7 +4,6 @@ set(TEST_CORE_SOURCES
         test_core.cpp
         settings_test.cpp
         analysis_test.cpp
-        sampler_tests.cpp
 )
 
 # Locate the Boost library for unit testing
@@ -20,7 +19,11 @@ add_executable(test_core ${TEST_CORE_SOURCES})
 # Link against the Boost Test library and the project's settings library
 target_link_libraries(test_core
         ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+        scram
+        boost_filesystem
+        boost_regex
         canopy
+        ${LIBS}
 )
 
 target_compile_definitions(test_core PUBLIC BOOST_TEST_DYN_LINK)

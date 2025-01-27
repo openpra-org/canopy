@@ -29,7 +29,7 @@
 
 #include "element.h"
 #include "event.h"
-#include "expression.h"
+#include "scram/expression.h"
 
 namespace scram::mef {
 

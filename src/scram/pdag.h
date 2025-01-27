@@ -45,9 +45,9 @@
 #include <boost/container/flat_set.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
-#include "ext/find_iterator.h"
-#include "ext/index_map.h"
-#include "ext/linear_map.h"
+#include "scram/ext/find_iterator.h"
+#include "scram/ext/index_map.h"
+#include "scram/ext/linear_map.h"
 
 #include <event.h>
 

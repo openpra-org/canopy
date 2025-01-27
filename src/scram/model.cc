@@ -21,9 +21,9 @@
 
 #include "model.h"
 
-#include "error.h"
-#include "ext/find_iterator.h"
-#include "ext/multi_index.h"
+#include "scram/error.h"
+#include "scram/ext/find_iterator.h"
+#include "scram/ext/multi_index.h"
 
 namespace scram::mef {
 

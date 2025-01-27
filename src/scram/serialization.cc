@@ -28,10 +28,10 @@
 
 #include "element.h"
 #include "event.h"
-#include "expression.h"
+#include "scram/expression.h"
 #include "expression/constant.h"
 #include "expression/exponential.h"
-#include "ext/variant.h"
+#include "scram/ext/variant.h"
 #include "fault_tree.h"
 #include "xml_stream.h"
 #include "logger.h"

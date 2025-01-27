@@ -21,8 +21,8 @@
 
 #include "substitution.h"
 
-#include "error.h"
-#include "ext/algorithm.h"
+#include "scram/error.h"
+#include "scram/ext/algorithm.h"
 
 namespace scram::mef {
 

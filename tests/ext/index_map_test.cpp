@@ -1,5 +1,5 @@
 #include <boost/test/unit_test.hpp>
-#include <ext/index_map.h>
+#include <scram/ext/index_map.h>
 
 BOOST_AUTO_TEST_SUITE(index_map_suite)
 

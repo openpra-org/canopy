@@ -26,7 +26,7 @@
 
 #include "bdd.h"
 #include "probability_analysis.h"
-#include "settings.h"
+#include "scram/settings.h"
 
 namespace scram::mef {  // Decouple from the analysis code header.
 class BasicEvent;

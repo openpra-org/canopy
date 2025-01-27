@@ -25,7 +25,11 @@ add_executable(test_ext ${TEST_EXT_SOURCES})
 # Link against the Boost Test library and the project's scram library
 target_link_libraries(test_ext
         ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+        scram
+        boost_filesystem
+        boost_regex
         canopy
+        ${LIBS}
 )
 
 target_compile_definitions(test_ext PUBLIC BOOST_TEST_DYN_LINK)

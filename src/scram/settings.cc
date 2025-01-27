@@ -19,13 +19,13 @@
 /// @file
 /// Implementation of Settings Builder.
 
-#include "settings.h"
+#include "scram/settings.h"
 
 #include <string>
 
 #include <boost/range/algorithm.hpp>
 
-#include "error.h"
+#include "scram/error.h"
 
 namespace scram::core {
 

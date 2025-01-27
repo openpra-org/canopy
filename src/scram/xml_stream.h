@@ -30,7 +30,7 @@
 
 #include <boost/exception/errinfo_errno.hpp>
 
-#include "error.h"
+#include "scram/error.h"
 
 namespace scram::xml {
 

@@ -21,8 +21,8 @@
 
 #include "alignment.h"
 
-#include "error.h"
-#include "ext/float_compare.h"
+#include "scram/error.h"
+#include "scram/ext/float_compare.h"
 
 namespace scram::mef {
 

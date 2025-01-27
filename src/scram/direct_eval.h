@@ -30,7 +30,7 @@
 #pragma once
 
 #include "pdag.h"
-#include "settings.h"
+#include "scram/settings.h"
 #include "zbdd.h"
 
 namespace scram::core {

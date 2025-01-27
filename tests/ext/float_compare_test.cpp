@@ -1,5 +1,5 @@
 #include <boost/test/unit_test.hpp>
-#include "ext/float_compare.h"
+#include "scram/ext/float_compare.h"
 
 BOOST_AUTO_TEST_SUITE(float_compare_suite)
 

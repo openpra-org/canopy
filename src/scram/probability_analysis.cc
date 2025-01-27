@@ -29,7 +29,7 @@
 #include "event.h"
 #include "logger.h"
 #include "parameter.h"
-#include "settings.h"
+#include "scram/settings.h"
 #include "zbdd.h"
 
 namespace scram::core {

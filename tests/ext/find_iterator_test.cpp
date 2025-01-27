@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include "ext/find_iterator.h"
+#include "scram/ext/find_iterator.h"
 
 using namespace ext;
 

@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
 #include <vector>
-#include "ext/combination.h"
+#include "scram/ext/combination.h"
 
 // Define operator<< for std::vector<int> to make it printable
 std::ostream& operator<<(std::ostream& os, const std::vector<int>& v) {

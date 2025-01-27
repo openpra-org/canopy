@@ -28,14 +28,14 @@
 #include <vector>
 
 #include "alignment.h"
-#include "analysis.h"
+#include "scram/analysis.h"
 #include "event.h"
 #include "event_tree_analysis.h"
 #include "fault_tree_analysis.h"
 #include "importance_analysis.h"
 #include "model.h"
 #include "probability_analysis.h"
-#include "settings.h"
+#include "scram/settings.h"
 #include "uncertainty_analysis.h"
 
 namespace scram::core {

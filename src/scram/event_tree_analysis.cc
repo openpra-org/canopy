@@ -21,7 +21,7 @@
 #include "event_tree_analysis.h"
 
 #include "expression/numerical.h"
-#include "ext/find_iterator.h"
+#include "scram/ext/find_iterator.h"
 #include "instruction.h"
 
 namespace scram::core {

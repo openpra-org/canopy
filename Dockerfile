@@ -43,11 +43,17 @@ ENV SRC_BUILD_PACKAGES="automake \
     libedit-dev \
     libeigen3-dev \
     libgmp-dev \
+    libgoogle-perftools-dev \
     libginac-dev \
     libglpk-dev \
     libhwloc-dev \
+    libjemalloc2 \
+    libjemalloc-dev \
     libnuma-dev \
+    libtcmalloc-minimal4 \
     libxerces-c-dev \
+    libxml2 \
+    libxml2-dev \
     libz3-dev \
     libzstd-dev \
     spirv-cross \

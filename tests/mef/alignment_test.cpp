@@ -1,15 +1,11 @@
 #include <boost/test/unit_test.hpp>
 
-#include "alignment.h"
-#include "error.h"
+#include "scram/alignment.h"
+#include "scram/error.h"
 
 using namespace scram::mef;
 
 #include <limits>
-#include "alignment.h"
-#include "error.h"
-
-using namespace scram::mef;
 
 BOOST_AUTO_TEST_SUITE(AlignmentandPhaseTests)
 

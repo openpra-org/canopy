@@ -23,7 +23,7 @@
 
 #include <algorithm>
 
-#include "error.h"
+#include "scram/error.h"
 
 namespace scram::mef {
 

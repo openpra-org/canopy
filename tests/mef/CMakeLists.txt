@@ -22,7 +22,11 @@ add_executable(test_mef ${TEST_MEF_SOURCES})
 # Link against the Boost Test library and the project's settings library
 target_link_libraries(test_mef
         ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+        scram
+        boost_filesystem
+        boost_regex
         canopy
+        ${LIBS}
 )
 
 # Enable testing with CTest

@@ -23,7 +23,7 @@
 
 #include "bdd.h"
 #include "expression/random_deviate.h"
-#include "ext/scope_guard.h"
+#include "scram/ext/scope_guard.h"
 #include "fault_tree.h"
 #include "logger.h"
 #include "mocus.h"

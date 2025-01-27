@@ -27,7 +27,7 @@
 #include <vector>
 
 #include "element.h"
-#include "ext/variant.h"
+#include "scram/ext/variant.h"
 #include "instruction.h"
 
 namespace scram::mef {

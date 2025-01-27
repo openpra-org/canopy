@@ -55,7 +55,7 @@
 #include <libxml/relaxng.h>
 #include <libxml/tree.h>
 
-#include "error.h"
+#include "scram/error.h"
 
 namespace scram::xml {
 

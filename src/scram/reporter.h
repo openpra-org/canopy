@@ -31,7 +31,7 @@
 #include "model.h"
 #include "probability_analysis.h"
 #include "risk_analysis.h"
-#include "settings.h"
+#include "scram/settings.h"
 #include "uncertainty_analysis.h"
 #include "xml_stream.h"
 

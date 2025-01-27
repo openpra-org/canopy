@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include <string>
 #include <vector>
-#include "ext/linear_map.h"
+#include "scram/ext/linear_map.h"
 
 using namespace ext;
 

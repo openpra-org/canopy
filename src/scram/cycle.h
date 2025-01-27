@@ -31,7 +31,7 @@
 #include <boost/range/adaptor/transformed.hpp>
 
 #include "element.h"
-#include "error.h"
+#include "scram/error.h"
 #include "event.h"
 #include "event_tree.h"
 #include "instruction.h"

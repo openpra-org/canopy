@@ -28,12 +28,12 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
-#include "error.h"
+#include "scram/error.h"
 #include "expression/constant.h"
 #include "expression/numerical.h"
-#include "ext/algorithm.h"
-#include "ext/combination.h"
-#include "ext/float_compare.h"
+#include "scram/ext/algorithm.h"
+#include "scram/ext/combination.h"
+#include "scram/ext/float_compare.h"
 
 namespace scram::mef {
 

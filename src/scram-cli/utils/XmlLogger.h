@@ -33,7 +33,7 @@
 #include <boost/exception/all.hpp>
 #include <boost/program_options.hpp>
 
-#include "error.h"
+#include "scram/error.h"
 #include "scram/ext/scope_guard.h"
 #include "scram/initializer.h"
 #include "scram/logger.h"

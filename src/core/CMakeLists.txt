@@ -17,5 +17,6 @@ add_library(canopy SHARED ${CANOPY_SRC})
 
 add_sycl_to_target(TARGET canopy SOURCES ${CANOPY_SRC})
 set_target_properties(canopy PROPERTIES LINKER_LANGUAGE CXX)
-add_executable(canopy-cli main.cpp)
-add_sycl_to_target(TARGET canopy-cli canopy SOURCES main.cpp ${CANOPY_SRC})
+
+#add_executable(canopy-cli main.cpp)
+#add_sycl_to_target(TARGET canopy-cli canopy SOURCES main.cpp ${CANOPY_SRC})

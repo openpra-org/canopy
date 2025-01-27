@@ -25,9 +25,9 @@
 #include <utility>
 #include <vector>
 
-#include "analysis.h"
+#include "scram/analysis.h"
 #include "probability_analysis.h"
-#include "settings.h"
+#include "scram/settings.h"
 
 namespace scram::mef {  // Decouple from the implementation dependence.
 class Expression;

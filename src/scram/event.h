@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "element.h"
-#include "expression.h"
+#include "scram/expression.h"
 
 namespace scram::mef {
 

@@ -31,7 +31,7 @@
 #include <boost/accumulators/statistics/variance.hpp>
 
 #include "event.h"
-#include "expression.h"
+#include "scram/expression.h"
 #include "logger.h"
 
 namespace scram::core {

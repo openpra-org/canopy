@@ -35,7 +35,7 @@
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 
 #include "pdag.h"
-#include "settings.h"
+#include "scram/settings.h"
 
 namespace scram::core {
 

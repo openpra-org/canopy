@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp>
-#include "error.h"
-#include "settings.h"
+#include "scram/error.h"
+#include "scram/settings.h"
 
 using namespace scram::core;
 

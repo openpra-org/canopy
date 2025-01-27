@@ -24,7 +24,7 @@
 #include <utility>
 #include <vector>
 
-#include "analysis.h"
+#include "scram/analysis.h"
 #include "bdd.h"
 #include "fault_tree_analysis.h"
 #include "pdag.h"

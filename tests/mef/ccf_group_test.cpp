@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
-#include "ccf_group.h"
-#include "error.h"
-#include "expression/constant.h"
+#include "scram/ccf_group.h"
+#include "scram/error.h"
+#include "scram/expression/constant.h"
 
 using namespace scram::mef;
 

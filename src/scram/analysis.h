@@ -27,7 +27,7 @@
 
 #include <boost/noncopyable.hpp>
 
-#include "settings.h"
+#include "scram/settings.h"
 
 namespace scram::core {
 

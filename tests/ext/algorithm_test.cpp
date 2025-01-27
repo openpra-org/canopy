@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include <vector>
 #include <list>
-#include "ext/algorithm.h"
+#include "scram/ext/algorithm.h"
 
 BOOST_AUTO_TEST_SUITE(algorithm_suite)
 

@@ -21,7 +21,7 @@
 
 #include "fault_tree.h"
 
-#include "error.h"
+#include "scram/error.h"
 
 namespace scram::mef {
 

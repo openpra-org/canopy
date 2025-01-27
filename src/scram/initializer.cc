@@ -36,7 +36,7 @@
 
 #include "cycle.h"
 #include "env.h"
-#include "error.h"
+#include "scram/error.h"
 #include "expression/boolean.h"
 #include "expression/conditional.h"
 #include "expression/exponential.h"
@@ -44,8 +44,8 @@
 #include "expression/numerical.h"
 #include "expression/random_deviate.h"
 #include "expression/test_event.h"
-#include "ext/algorithm.h"
-#include "ext/find_iterator.h"
+#include "scram/ext/algorithm.h"
+#include "scram/ext/find_iterator.h"
 #include "logger.h"
 
 namespace scram::mef {

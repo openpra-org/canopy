@@ -19,13 +19,13 @@
 /// @file
 /// Implementation of the expression base class.
 
-#include "expression.h"
+#include "scram/expression.h"
 
 #include <sstream>
 #include <string>
 
-#include "error.h"
-#include "ext/algorithm.h"
+#include "scram/error.h"
+#include "scram/ext/algorithm.h"
 
 namespace scram::mef {
 

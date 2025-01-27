@@ -36,7 +36,7 @@
 
 #include "ccf_group.h"
 #include "element.h"
-#include "error.h"
+#include "scram/error.h"
 #include "logger.h"
 #include "parameter.h"
 

@@ -21,7 +21,7 @@
 
 #include "parameter.h"
 
-#include "error.h"
+#include "scram/error.h"
 
 namespace scram::mef {
 

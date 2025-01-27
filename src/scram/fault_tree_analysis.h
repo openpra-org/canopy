@@ -30,10 +30,10 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
-#include "analysis.h"
+#include "scram/analysis.h"
 #include "pdag.h"
 #include "preprocessor.h"
-#include "settings.h"
+#include "scram/settings.h"
 #include "zbdd.h"
 
 namespace scram::mef {  // Decouple from the analysis code.
