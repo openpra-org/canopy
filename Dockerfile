@@ -7,7 +7,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ## install apt-fast for faster downloads
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt update && \
     apt install -y --no-install-recommends software-properties-common && \
@@ -81,7 +80,6 @@ EOF
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-fast install -y --no-install-recommends \
     $BUILD_PACKAGES \
@@ -102,7 +100,6 @@ ENV LLVM_PACKAGES="libclang-$CLANG_VERSION-dev \
     lld-$CLANG_VERSION"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
@@ -117,7 +114,6 @@ ENV INTEL_ONEAPI_OPENCL_PACKAGES="intel-oneapi-runtime-opencl-2024 intel-oneapi-
 ENV INTEL_ONEAPI_MKL_PACKAGES="intel-oneapi-mkl intel-oneapi-mkl-devel"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null && \
     echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | tee /etc/apt/sources.list.d/oneAPI.list && \
@@ -153,7 +149,6 @@ ENV CMAKE_CXX_COMPILER="/usr/bin/clang++-$CLANG_VERSION"
 ENV CXX="$CMAKE_CXX_COMPILER"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     dpkg -i /build/intel-lz/debs/*.deb && \
     git clone https://github.com/oneapi-src/level-zero.git && \
     mkdir -p level-zero/build && cd level-zero/build && \
@@ -176,7 +171,6 @@ COPY --from=amdgpu-debs /build/amdgpu/debs /build/amdgpu/debs
 ARG ROCM_PACKAGES="rocm-dev"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     dpkg -i /build/amdgpu/debs/*.deb && \
     amdgpu-install --usecase=opencl --opencl=rocr --vulkan=pro,amdvlk --no-dkms --accept-eula -y && \
@@ -194,7 +188,6 @@ ENV CLANG_EXECUTABLE_PATH="/usr/bin/clang++-$CLANG_VERSION"
 ENV LLVM_DIR="/usr/lib/llvm-$CLANG_VERSION/cmake"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     git clone https://github.com/AdaptiveCpp/AdaptiveCpp && \
     mkdir -p AdaptiveCpp/build && cd AdaptiveCpp/build && \
@@ -243,7 +236,6 @@ ENV SSH_DEBUGGER_PACKAGES="openssh-server rsync"
 USER "root"
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt-fast,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-fast install -y --no-install-recommends $SSH_DEBUGGER_PACKAGES && \
     echo "${USER}:${USER}" | chpasswd && \
