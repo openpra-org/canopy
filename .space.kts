@@ -86,14 +86,14 @@ job("canopy-ci") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
+                          docker run --rm --device=/dev/dri --device=/dev/kfd --cap-add=ALL --security-opt seccomp=unconfined --group-add video -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
                           """
             }
             shellScript("acpp-info") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
+                          docker run --rm --device=/dev/dri --device=/dev/kfd --cap-add=ALL --security-opt seccomp=unconfined --group-add video -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
                           """
             }
 
@@ -101,7 +101,7 @@ job("canopy-ci") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
+                          docker run --rm --device=/dev/dri --device=/dev/kfd --cap-add=ALL --security-opt seccomp=unconfined --group-add video -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
                           """
             }
 
@@ -109,7 +109,7 @@ job("canopy-ci") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
+                          docker run --rm --device=/dev/dri --device=/dev/kfd --cap-add=ALL --security-opt seccomp=unconfined --group-add video -e ACPP_VISIBILITY_MASK=hip "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
                           """
             }
         }
@@ -194,14 +194,14 @@ job("canopy-ci") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
+                          docker run --rm --device=/dev/dri -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
                           """
             }
             shellScript("acpp-info") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
+                          docker run --rm --device=/dev/dri -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
                           """
             }
 
@@ -209,7 +209,7 @@ job("canopy-ci") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
+                          docker run --rm --device=/dev/dri -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
                           """
             }
 
@@ -217,7 +217,7 @@ job("canopy-ci") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
+                          docker run --rm --device=/dev/dri -e ACPP_VISIBILITY_MASK=ocl "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
                           """
             }
         }
@@ -230,14 +230,14 @@ job("canopy-ci") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
+                          docker run --rm --device=/dev/dri --e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" clinfo
                           """
             }
             shellScript("acpp-info") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
+                          docker run --rm --device=/dev/dri -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" acpp-info
                           """
             }
 
@@ -245,7 +245,7 @@ job("canopy-ci") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
+                          docker run --rm --device=/dev/dri -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" ctest --verbose --output-on-failure || true
                           """
             }
 
@@ -253,7 +253,7 @@ job("canopy-ci") {
                 interpreter = "/bin/bash"
                 content = """
                           docker pull "$remote:ci-{{ run:number }}-{{ branchSlug }}"
-                          docker run --rm -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
+                          docker run --rm --device=/dev/dri -e ACPP_VISIBILITY_MASK=ze "$remote:ci-{{ run:number }}-{{ branchSlug }}" ./src/bool/bool || true
                           """
             }
         }
