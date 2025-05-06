@@ -1,3 +1,5 @@
+add_subdirectory(xml)
+
 set(IO_HEADERS
         json.h
         parser.h
@@ -5,6 +7,7 @@ set(IO_HEADERS
 )
 
 set(IO_SOURCES
+
 )
 
 add_library(io STATIC ${IO_SOURCES} ${IO_HEADERS})
