@@ -5,7 +5,7 @@
 #include <bitset>
 #include <vector>
 
-#include "bitwise/bar.h"
+#include "bar.h"
 
 bool kn(bit_index_t k, BIT_ARRAY* n);
 

@@ -1,5 +1,6 @@
 #ifndef CANOPY_SAMPLER_IMPORTANCE_H
 #define CANOPY_SAMPLER_IMPORTANCE_H
+#include "utils/types.h"
 
 /**
  * @file importance.h

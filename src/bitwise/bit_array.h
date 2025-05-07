@@ -14,7 +14,7 @@
 #include <cstdio>
 #include <cinttypes>
 
-#include "bitwise/bit_macros.h"
+#include "bit_macros.h"
 
 /**
  * @typedef BIT_ARRAY
