@@ -2,13 +2,6 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/flatbuffers-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/json-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/nlohmann_json-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/flatbuffers-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/json-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/nlohmann_json-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/external/flatbuffers" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/fixtures/generic-openpsa-models" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/fixtures/generic-pwr-openpsa-model" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/fixtures/synthetic-openpsa-models" vcs="Git" />

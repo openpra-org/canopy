@@ -31,7 +31,7 @@ message(STATUS "C++ compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
 option(BUILD_TESTS "Build tests" ON)  # Influences CTest.
 option(BUILD_EXAMPLES "Build examples" ON)
 option(CODE_COVERAGE "Perform code coverage analysis" OFF)
-option(PORTABLE "Build without CPU specific optimizations" OFF)
+option(NATIVE_OPTIMIZATIONS "Build with CPU specific optimizations" ON)
 option(ENABLE_LTO "Enable Link-Time Optimization (LTO)" ON)
 option(ENABLE_PGO "Enable Profile-Guided Optimization (PGO)" OFF)
 ######################### Options ################################################## }}}
