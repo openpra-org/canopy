@@ -13,7 +13,6 @@
 #include <cmath>
 #include <boost/math/distributions/normal.hpp>
 #include <utility>
-#include <stdexcept>
 #include <limits>
 #include <iomanip>
 
@@ -50,9 +49,7 @@ namespace canopy::utils {
      * ```
      */
     template<typename float_type, typename size_type>
-    static inline float_type mean(const size_type count, const size_type samples) {
-        return (static_cast<float_type>(count) / static_cast<float_type>(samples));
-    }
+    static inline float_type mean(const size_type count, const size_type samples);
 
     /**
      * @brief Calculates the absolute error between an estimated value and a known value.
@@ -68,9 +65,7 @@ namespace canopy::utils {
      * ```
      */
     template<typename float_type>
-    static inline float_type absolute_error(const float_type estimated, const float_type known) {
-        return std::abs(estimated - known);
-    }
+    static inline float_type absolute_error(const float_type estimated, const float_type known);
 
     /**
      * @brief Calculates the relative error given the absolute error and the known value.
@@ -86,10 +81,7 @@ namespace canopy::utils {
      * ```
      */
     template<typename float_type>
-    static inline float_type relative_error(const float_type error, const float_type known) {
-        const auto hundred_times_error = static_cast<float_type>(100) * error;
-        return (hundred_times_error / known);
-    }
+    static inline float_type relative_error(const float_type error, const float_type known);
 
     /**
      * @brief Calculates the variance of boolean tallies.
@@ -106,10 +98,7 @@ namespace canopy::utils {
      * ```
      */
     template<typename float_type, typename size_type>
-    static inline float_type variance(const float_type mean, const size_type samples) {
-        const auto mean_squared = mean * mean;
-        return ((mean - mean_squared) / static_cast<float_type>(samples));
-    }
+    static inline float_type variance(const float_type mean, const size_type samples);
 
     /**
      * @brief Computes the standard error of the mean for boolean tallies.
@@ -131,13 +120,7 @@ namespace canopy::utils {
      * ```
      */
     template<typename float_type, typename size_type>
-    static inline float_type standard_error(const float_type mean, const size_type samples) {
-        const auto one_minus_mean = static_cast<float_type>(1) - mean;
-        const auto numerator = mean * one_minus_mean;
-        const auto term = numerator / static_cast<float_type>(samples);
-        const auto square_root = std::sqrt(term);
-        return square_root;
-    }
+    static inline float_type standard_error(const float_type mean, const size_type samples);
 
     /**
      * @brief Calculates the confidence interval for the mean of boolean tallies.
@@ -158,31 +141,7 @@ namespace canopy::utils {
      * ```
      */
     template<typename float_type, typename size_type>
-    static std::pair<float_type, float_type> confidence_interval(const float_type mean, const size_type num_samples, const float_type confidence_level) {
-        if (num_samples == 0) {
-            throw std::invalid_argument("Number of samples must be greater than 0.");
-        }
-
-        // Calculate the z-score for the given confidence level
-        const boost::math::normal_distribution<float_type> dist(0, 1);
-        const float_type z = boost::math::quantile(dist, (1 + confidence_level) / 2);
-
-        // Calculate the standard error
-        const float_type standard_error_val = canopy::utils::standard_error<float_type, size_type>(mean, num_samples);
-
-        // Calculate the margin of error
-        float_type margin_of_error = z * standard_error_val;
-
-        // Calculate the confidence interval limits
-        float_type lower_limit = mean - margin_of_error;
-        float_type upper_limit = mean + margin_of_error;
-
-        // Ensure limits are within [0, 1]
-        lower_limit = std::max(lower_limit, static_cast<float_type>(0.0));
-        upper_limit = std::min(upper_limit, static_cast<float_type>(1.0));
-
-        return std::make_pair(lower_limit, upper_limit);
-    }
+    static std::pair<float_type, float_type> confidence_interval(const float_type mean, const size_type num_samples, const float_type confidence_level);
 
     /**
      * @class SummaryStatistics
@@ -219,19 +178,8 @@ namespace canopy::utils {
          * SummaryStatistics<double, size_type> stats(true_counts, total_counts, known_prob);
          * ```
          */
-        SummaryStatistics(const size_type trueTallies, const size_type totalTallies, const float_type knownProbability = std::numeric_limits<float_type>::quiet_NaN())
-                : true_tallies_(trueTallies),
-                  total_tallies_(totalTallies),
-                  known_probability_(knownProbability)
-        {
-            computed_mean_ = canopy::utils::mean<float_type, size_type>(true_tallies_, total_tallies_);
-            computed_variance_ = canopy::utils::variance<float_type, size_type>(computed_mean_, total_tallies_);
-            computed_absolute_error_ = canopy::utils::absolute_error<float_type>(computed_mean_, known_probability_);
-            computed_relative_error_ = canopy::utils::relative_error<float_type>(computed_absolute_error_, known_probability_);
-            computed_standard_error_ = canopy::utils::standard_error<float_type, size_type>(computed_mean_, total_tallies_);
-            computed_p95_ci_ = canopy::utils::confidence_interval<float_type, size_type>(computed_mean_, total_tallies_, 0.95);
-            computed_p99_ci_ = canopy::utils::confidence_interval<float_type, size_type>(computed_mean_, total_tallies_, 0.99);
-        }
+        SummaryStatistics(const size_type trueTallies, const size_type totalTallies, const float_type knownProbability = std::numeric_limits<float_type>::quiet_NaN());
+
 
     protected:
         /// The number of true tallies (outcome = 1) provided in the constructor.

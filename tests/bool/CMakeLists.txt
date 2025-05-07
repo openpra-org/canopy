@@ -13,12 +13,12 @@ add_executable(test_bool ${TEST_BOOL_SOURCES})
 find_package(_boost REQUIRED COMPONENTS unit_test_framework)
 
 # Include directories for the test
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories("../../src")
+#include_directories(${Boost_INCLUDE_DIRS})
+#include_directories("../../src")
 target_include_directories(test_bool PRIVATE ${Boost_INCLUDE_DIRS} ${OpenMP_CXX_INCLUDE_DIRS})
 
 
-add_definitions(-DBOOST_TEST_DYN_LINK)
+#add_definitions(-DBOOST_TEST_DYN_LINK)
 
 
 # Link against the Boost Test library and the project's settings library

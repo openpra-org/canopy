@@ -2,7 +2,7 @@
 // Created by earthperson on 5/5/25.
 //
 
-#include "builder.h"
+#include "expr/builder.h"
 
 namespace canopy::expr {
 

@@ -8,8 +8,8 @@ set(TEST_DEVICE_COMPILATION_SOURCES
 find_package(_boost REQUIRED COMPONENTS unit_test_framework)
 
 # Include directories for the test
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories("../../src")
+#include_directories(${Boost_INCLUDE_DIRS})
+#include_directories("../../src")
 
 #add_definitions(-DBOOST_TEST_DYN_LINK)
 

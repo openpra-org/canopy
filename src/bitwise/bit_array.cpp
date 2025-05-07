@@ -19,8 +19,8 @@
 #include <intrin.h>
 #endif
 
-#include "bit_array.h"
-#include "bit_macros.h"
+#include "bitwise/bit_array.h"
+#include "bitwise/bit_macros.h"
 
 //
 // Tables of constants
@@ -2215,7 +2215,7 @@ void bit_array_random(BIT_ARRAY* bitarr, float prob)
    {
        return;
    }
-   else if(prob == 1)
+    if(prob == 1)
    {
        bit_array_set_all(bitarr);
        return;
@@ -2223,7 +2223,7 @@ void bit_array_random(BIT_ARRAY* bitarr, float prob)
 
    // rand() generates number between 0 and RAND_MAX inclusive
    // therefore we want to check if rand() <= p
-   long p = RAND_MAX * prob;
+   const int p = static_cast<int>(prob * (RAND_MAX + 1.0));
 
    _seed_rand();
 
@@ -2239,7 +2239,7 @@ void bit_array_random(BIT_ARRAY* bitarr, float prob)
        {
            if(rand() <= p)
            {
-               bitarr->words[w] |= ((word_t)0x1 << o);
+               bitarr->words[w] |= static_cast<word_t>(0x1) << o;
            }
        }
    }
@@ -2252,7 +2252,7 @@ void bit_array_random(BIT_ARRAY* bitarr, float prob)
    {
        if(rand() <= p)
        {
-           bitarr->words[w] |= ((word_t)0x1 << o);
+           bitarr->words[w] |= static_cast<word_t>(0x1) << o;
        }
    }
 

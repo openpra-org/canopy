@@ -12,7 +12,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "io/json.h"
+#include <nlohmann/json.hpp>
 
 namespace canopy::utils {
 
@@ -85,7 +85,7 @@ template <typename T> static bool failsNonNegativeNumberCheck(T value) {
  */
 static bool absoluteValueFailsGreaterThan1Check(long double value) {
     const long double max = 1.0f;
-    if (abs(value) >= max) {
+    if (std::fabs(value) >= max) {
         std::cerr << "Error: "
                   << "abs(x) is greater than " << std::setprecision(19) << max << "\n";
         return true;

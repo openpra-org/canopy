@@ -1,6 +1,6 @@
 #ifndef CANOPY_COMPUTE_H
 #define CANOPY_COMPUTE_H
-#include "working_set.h"
+#include "bool/working_set.h"
 
 #include <CL/sycl.hpp>
 #include <cstddef>

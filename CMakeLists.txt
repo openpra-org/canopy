@@ -7,15 +7,20 @@ set(CANOPY_VERSION_PATCH 0)
 set(CMAKE_C_COMPILER /usr/bin/clang-18)
 set(CMAKE_CXX_COMPILER /usr/bin/clang++-18)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 
 project(canopy VERSION ${CANOPY_VERSION_MAJOR}.${CANOPY_VERSION_MINOR}.${CANOPY_VERSION_PATCH})
 
+set(CMAKE_DISABLE_SOURCE_CHANGES ON) # In-source build prevention.
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+
 # Tell CMake where the modules are.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/_cmake")
 message(DEBUG "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
+include("${CMAKE_MODULE_PATH}/helpers.cmake") # Include helper methods
 
 # Print compiler information
 message(STATUS "C compiler: ${CMAKE_C_COMPILER}")
@@ -25,6 +30,39 @@ message(STATUS "C++ compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
 ######################### Options ################################################## {{{
 option(BUILD_TESTS "Build tests" ON)  # Influences CTest.
 option(BUILD_EXAMPLES "Build examples" ON)
+option(CODE_COVERAGE "Perform code coverage analysis" OFF)
+option(PORTABLE "Build without CPU specific optimizations" OFF)
+option(ENABLE_LTO "Enable Link-Time Optimization (LTO)" ON)
+option(ENABLE_PGO "Enable Profile-Guided Optimization (PGO)" OFF)
+######################### Options ################################################## }}}
+
+######################## Link-Time Optimization ############## {{{
+set(CMAKE_POSITION_INDEPENDENT_CODE OFF) # OFF is ok for static libs
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ${ENABLE_LTO})
+######################## Link-Time Optimization ############## }}}
+
+######################## Profile-Guided Optimization ######### {{{
+if(ENABLE_PGO)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_compile_options(-fprofile-generate)
+        add_link_options(-fprofile-generate)
+    elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+        add_compile_options(-fprofile-use -fprofile-correction)
+        add_link_options(-fprofile-use -fprofile-correction)
+    endif()
+endif()
+######################## Profile-Guided Optimization ######### }}}
+
+######################## Non-Portable Optimizations ########## {{{
+set(NON_PORTABLE_CXX_FLAGS)
+mark_as_advanced(NON_PORTABLE_CXX_FLAGS)
+CHECK_COMPILER_FLAG_SUPPORT("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE NON_PORTABLE_CXX_FLAGS)
+CHECK_COMPILER_FLAG_SUPPORT("-xHost" COMPILER_SUPPORTS_XHOST NON_PORTABLE_CXX_FLAGS)
+
+if (NOT PORTABLE)
+    add_compile_options(${NON_PORTABLE_CXX_FLAGS})
+endif ()
+######################## Non-Portable Optimizations ########## }}}
 
 # CMake 3.27 - Address CMP0144 policy warning
 # @link https://cmake.org/cmake/help/latest/policy/CMP0167.html#policy:CMP0144

@@ -10,8 +10,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "flatbuffers/flatbuffers.h"
-#include "io/pla.h"
+#include <flatbuffers/flatbuffers.h>
+
+#include "src/mef/canopy/schema/pla.h"
 
 BOOST_AUTO_TEST_SUITE(IOTestsPLA)
 

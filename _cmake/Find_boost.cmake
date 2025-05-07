@@ -24,40 +24,36 @@ if(POLICY CMP0167)
 endif()
 
 if(NOT _boost_FOUND)
-    # Check if the system is macOS and Homebrew is installed
-    if(APPLE)
-        find_program(HOMEBREW_FOUND brew)
-        if(HOMEBREW_FOUND)
-            execute_process(
-                    COMMAND brew --prefix boost
-                    OUTPUT_VARIABLE BOOST_ROOT
-                    OUTPUT_STRIP_TRAILING_WHITESPACE
-            )
-        endif()
-    endif()
+#    message(STATUS "Downloading and extracting boost library sources. This will take some time...")
 
-    # Set Boost paths if Homebrew provided a path
-    if(DEFINED BOOST_ROOT)
-        set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include")
-        set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
-    else()
-        # Default to system paths if BOOST_ROOT is not set
-        set(BOOST_INCLUDEDIR "/usr/include")
-        set(BOOST_LIBRARYDIR "/usr/lib")
-    endif()
+    set(BOOST_INCLUDE_LIBRARIES thread filesystem system program_options serialization test)
+    set(BOOST_ENABLE_CMAKE ON)
+    set(FETCHCONTENT_QUIET ON)
+    include(FetchContent)
+    FetchContent_Declare(
+            Boost
+            URL "https://github.com/boostorg/boost/releases/download/boost-1.88.0/boost-1.88.0-cmake.tar.gz"
+            URL_HASH SHA256=dcea50f40ba1ecfc448fdf886c0165cf3e525fef2c9e3e080b9804e8117b9694
+            USES_TERMINAL_DOWNLOAD TRUE
+            DOWNLOAD_NO_EXTRACT FALSE
+            DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+            GIT_SHALLOW TRUE
+            GIT_PROGRESS ON
+            OVERRIDE_FIND_PACKAGE TRUE # needed to find correct Boost
+            EXCLUDE_FROM_ALL # compile only what you need
+    )
+    FetchContent_MakeAvailable(Boost)
 
-    find_package(Boost 1.74.0 REQUIRED)
-    find_package(Boost 1.74.0 COMPONENTS unit_test_framework REQUIRED)
+    find_package(Boost 1.88.0 EXACT REQUIRED)
+    find_package(Boost 1.88.0 COMPONENTS unit_test_framework REQUIRED)
 
     if(Boost_FOUND)
         set(_boost_FOUND TRUE BOOL "Flag to indicate that Boost has been configured using this module")
-        message(STATUS "Boost found")
+        message(DEBUG "Boost found")
         set(Boost_USE_STATIC_LIBS   ON)
         set(Boost_USE_MULTITHREADED ON)
         message(DEBUG "Boost Include directory: ${Boost_INCLUDE_DIR}")
         message(DEBUG "Boost Library directories: ${Boost_LIBRARY_DIRS}")
-        include_directories(SYSTEM ${Boost_INCLUDE_DIR})
-        link_libraries(${Boost_LIBRARIES})
     else()
         message(FATAL_ERROR "Boost not found. Please install Boost.")
     endif()

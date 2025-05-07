@@ -1,5 +1,3 @@
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 set(NBITS_HEADERS
         nbits.h
         bits8.h

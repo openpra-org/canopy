@@ -1,5 +1,3 @@
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 set(BOOL_ET_SOURCES
         kaplan_et.cpp
 )

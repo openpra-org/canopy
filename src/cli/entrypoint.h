@@ -10,7 +10,7 @@
 
 #include <boost/program_options.hpp>
 
-#include "cmdline.h"
+#include "cli/cmdline.h"
 
 namespace canopy::cli {
 /**

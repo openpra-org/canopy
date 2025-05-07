@@ -1,5 +1,3 @@
-set(Boost_USE_STATIC_LIBS OFF)
-
 set(TEST_BITWISE_SOURCES
         test_bitwise.cpp
         bar_tests.cpp
@@ -10,18 +8,19 @@ set(TEST_BITWISE_SOURCES
 # Locate the Boost library for unit testing
 find_package(_boost REQUIRED COMPONENTS unit_test_framework)
 
-# Include directories for the test
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories("../../src")
-
-add_definitions(-DBOOST_TEST_DYN_LINK)
-
 # Add the test executable
 add_executable(test_bitwise ${TEST_BITWISE_SOURCES})
 
+target_include_directories(test_bitwise
+        PRIVATE
+        Boost::unit_test_framework
+        bitwise
+)
+
 # Link against the Boost Test library and the project's settings library
 target_link_libraries(test_bitwise
-        ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+        PRIVATE
+        Boost::unit_test_framework
         bitwise
 )
 

@@ -1,5 +1,3 @@
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 set(BITWISE_SRC
         bar.h
         bit_array.h

@@ -13,7 +13,7 @@
 #include <sstream>
 #include <string>
 
-#include "io/json.h"
+#include <nlohmann/json.hpp>
 
 #include <boost/program_options.hpp>
 #include <boost/accumulators/accumulators.hpp>

@@ -1,5 +1,3 @@
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 set(CANOPY_API_SOURCES
         canopy.h
 )

@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <cmath>
-
 #include "expr/op.h"
 
 /**

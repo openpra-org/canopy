@@ -1,5 +1,3 @@
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 set(BOOL_HEADERS
         compute.h
         events.h
@@ -12,7 +10,7 @@ set(BOOL_SOURCES
 )
 
 add_executable(bool ${BOOL_SOURCES} ${BOOL_HEADERS})
-
+target_link_libraries(bool PRIVATE utils)
 add_sycl_to_target(TARGET bool utils SOURCES ${BOOL_SOURCES} ${BOOL_HEADERS})
 
 install(TARGETS bool

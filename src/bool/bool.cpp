@@ -1,4 +1,5 @@
-#include "compute.h"
+#include "bool/compute.h"
+#include "bool/device_info.h"
 
 #include <CL/sycl.hpp>
 #include <iomanip>
@@ -9,7 +10,6 @@
 #include "utils/profiler.h"
 #include "utils/stats.h"
 #include "utils/types.h"
-#include "utils/device_info.h"
 
 /**
  * @brief Number of unique symbols (variables) in expression F.

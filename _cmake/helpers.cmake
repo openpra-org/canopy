@@ -1,0 +1,7 @@
+function(CHECK_COMPILER_FLAG_SUPPORT FLAG SUPPORT_VAR FLAGS_VAR)
+    include(CheckCXXCompilerFlag)
+    CHECK_CXX_COMPILER_FLAG(${FLAG} ${SUPPORT_VAR})
+    if (${SUPPORT_VAR})
+        set(${FLAGS_VAR} "${${FLAGS_VAR}};${FLAG}" PARENT_SCOPE)
+    endif ()
+endfunction()
