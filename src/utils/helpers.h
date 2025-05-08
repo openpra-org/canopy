@@ -6,7 +6,7 @@
  * @date 08/30/2023
  * @brief This file contains helper functions and structures used throughout the program.
  */
-
+#include <sys/ioctl.h>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -113,7 +113,7 @@ template <typename T> static T scale(T value, T old_min, T old_max, T new_min, T
  * @return The number of iterations before the point escapes the Julia set.
  */
 template <typename T>
-size_t juliaSetIterations(const std::complex<T> &z0, const std::complex<T> &c, size_t max_iterations) {
+size_t juliaSetIterations(const std::complex<T> &z0, const std::complex<T> &c, const size_t &max_iterations) {
     std::complex<T> z = z0;
     size_t iter = 0;
     for (; iter < max_iterations; iter++) {
@@ -133,7 +133,7 @@ size_t juliaSetIterations(const std::complex<T> &z0, const std::complex<T> &c, s
  * @tparam T This is the type of the scaling factor and the growth rate. It can be any type that supports assignment and
  * arithmetic operations.
  */
-template <typename T> struct ToneMap {
+template <typename T> struct ToneMapType {
     /**
      * @brief The scaling factor for the tone map.
      *
@@ -150,40 +150,91 @@ template <typename T> struct ToneMap {
      */
     T growth_rate = 0.3;
 };
+typedef ToneMapType<long double> ToneMap;
 
 /**
  * @brief A struct representing the properties of a canvas for rendering ANSI characters
  * @tparam T The type of the numbers used for the canvas dimensions and properties.
  */
 template <typename T> struct CanvasType {
-    size_t width = 80;
-    size_t height = 24;
-    T x_start = -2;
-    T y_start = -2;
-    T x_stop = 2;
-    T y_stop = 2;
-    std::string character = "█";
-    T contrast = 1.0;
-    ToneMap<T> tone_map;
+    std::complex<T> c;
+    std::pair<T, T> x_bounds = {-2, 2};
+    std::pair<T, T> y_bounds = {-2, 2};
 };
 typedef CanvasType<__float128> Canvas;
+
+template <typename T> struct ViewPortType {
+    T width = 80;
+    T height = 24;
+
+    [[nodiscard]] ViewPortType() {
+       fill();
+    }
+
+    inline void fill() {
+        winsize viewport{};
+
+        for (int fds[] = {STDOUT_FILENO, STDIN_FILENO, STDERR_FILENO}; const int fd : fds) {
+            if (isatty(fd) && ioctl(fd, TIOCGWINSZ, &viewport) == 0) {
+                if (viewport.ws_row > 0 && viewport.ws_col > 0) {
+                    width = viewport.ws_row;
+                    height = viewport.ws_col;
+                    return;
+                }
+            }
+        }
+
+        const char* env_lines = std::getenv("LINES");
+        const char* env_cols  = std::getenv("COLUMNS");
+        char* endptr1 = nullptr;
+        char* endptr2 = nullptr;
+        errno = 0;
+        const long lines = env_lines ? std::strtol(env_lines, &endptr1, 10) : 0;
+        const long columns  = env_cols  ? std::strtol(env_cols,  &endptr2, 10) : 0;
+
+        if (errno == 0 && endptr1 && *endptr1 == '\0' && endptr2 && *endptr2 == '\0' &&
+            lines > 0 && lines <= INT_MAX && columns > 0 && columns <= INT_MAX) {
+            width = static_cast<T>(lines);
+            height = static_cast<T>(columns);
+            }
+    }
+};
+typedef ViewPortType<std::uint16_t> ViewPort;
+
+/**
+ * @tparam T The type of the numbers used for the complex numbers.
+ * @param canvas The canvas properties for rendering the Julia set.
+ * @param c The complex constant
+ * @param max_iterations The maximum number of iterations (default is 120).
+*/
+template <typename T> struct FractalArtType {
+    CanvasType<T> canvas;
+    size_t max_iterations = 120;
+    std::string character = "█";
+    T contrast = 1.0;
+    ToneMap tone_map;
+    ViewPort viewport;
+};
+typedef FractalArtType<__float128> FractalArt;
 
 /**
  * @brief Generates a vector of 256-bit ANSI gray shades.
  * @return A vector of ANSI escape codes representing gray shades.
  */
-static std::vector<std::string> getGrays256bitANSI(long double scaling_factor = 1e-7, long double growth_rate = 0.3) {
+template <typename T = long double>
+static std::vector<std::string> getGrays256bitANSI(const ToneMapType<T> &tone_map) {
 
-    const long double x_min = 232;
-    const long double x_max = 255;
-    auto x = std::vector<long double>(26);
-    fill_linspace(x, x_min, x_max, 26);
+    constexpr size_t shades = 26;
+    auto x = std::vector<T>(shades);
+    constexpr T x_min = 232;
+    constexpr T x_max = 255;
+    fill_linspace(x, x_min, x_max, shades);
 
-    auto y = std::vector<long double>(26);
-    auto y_min = std::numeric_limits<long double>::max();
-    auto y_max = std::numeric_limits<long double>::min();
+    auto y = std::vector<T>(shades);
+    auto y_min = std::numeric_limits<T>::max();
+    auto y_max = std::numeric_limits<T>::min();
     for (size_t i = 0; i < x.size(); i++) {
-        y[i] = scaling_factor * std::exp(growth_rate * x[i]);
+        y[i] = tone_map.scaling_factor * std::exp(tone_map.growth_rate * x[i]);
         if (y[i] > y_max) {
             y_max = y[i];
         }
@@ -192,11 +243,14 @@ static std::vector<std::string> getGrays256bitANSI(long double scaling_factor = 
         }
     }
 
-    // 26 shades of gray
+
     std::vector<std::string> grayShades;
     grayShades.emplace_back("\033[38;5;016m"); // black
+
+    // 23 shades of gray
     for (size_t i = 0; i < 24; ++i) {
-        grayShades.push_back("\033[38;5;" + std::to_string(232 + i) + "m");
+        const auto idx = std::to_string(static_cast<size_t>(std::floor(x_min + i)));
+        grayShades.push_back("\033[38;5;" + idx + "m");
     }
     grayShades.emplace_back("\033[38;5;231m"); // white
 
@@ -242,83 +296,121 @@ static std::vector<std::string> getHSV256bitANSI() {
     return colors;
 }
 
-/**
- * @brief Prints the Julia set to the console using the specified canvas properties.
- * @tparam T The type of the numbers used for the complex numbers.
- * @param canvas The canvas properties for rendering the Julia set.
- * @param x0 The real part of the constant complex number.
- * @param y0 The imaginary part of the constant complex number.
- * @param max_iterations The maximum number of iterations (default is 120).
- */
 template <typename T>
-void printJuliaSet(const Canvas &canvas, const T x0, const T y0, const size_t max_iterations = 120) {
+struct Stats {
+    T min, max, mean, median;
+};
 
-    const T x_range = std::abs(canvas.x_stop - canvas.x_start);
-    const T y_range = std::abs(canvas.y_stop - canvas.y_start);
-    T x_step = x_range / static_cast<T>(canvas.width);
-    T y_step = y_range / static_cast<T>(canvas.height);
-
-    const std::complex<T> c(x0, y0);
-
-    T min = std::numeric_limits<T>::max();
-    T max = std::numeric_limits<T>::min();
-    T avg = 0.0;
-
-    for (size_t y = 0; y < canvas.height; ++y) {
-        for (size_t x = 0; x < canvas.width; ++x) {
-            std::complex<T> z = std::complex<T>(canvas.x_start + x * x_step, canvas.y_start + y * y_step);
-            size_t iter = juliaSetIterations(z, c, max_iterations);
-            const T log_iter = std::log2(iter);
-            if (log_iter == NAN || std::isinf(static_cast<long double>(log_iter))) {
-                continue;
-            }
-            min = std::min(min, log_iter);
-            max = std::max(max, log_iter);
-            avg += log_iter;
-        }
+template <typename T>
+Stats<T> compute_stats(const std::vector<T>& data) {
+    Stats<T> stats;
+    if (data.empty()) {
+        stats.min = stats.max = stats.mean = stats.median = T(0);
+        return stats;
     }
-    avg = avg / (canvas.width * canvas.height);
+    stats.min = *std::min_element(data.begin(), data.end());
+    stats.max = *std::max_element(data.begin(), data.end());
+    stats.mean = std::accumulate(data.begin(), data.end(), T(0)) / T(data.size());
 
-    const auto scalar = static_cast<long double>(canvas.tone_map.scaling_factor);
-    const auto growth = static_cast<long double>(canvas.tone_map.growth_rate);
-    std::vector<std::string> colors = getGrays256bitANSI(scalar, growth);
-    for (size_t y = 0; y < canvas.height; ++y) {
-        for (size_t x = 0; x < canvas.width; ++x) {
-            std::complex<T> z = std::complex<T>(canvas.x_start + x * x_step, canvas.y_start + y * y_step);
-            size_t iter = juliaSetIterations(z, c, max_iterations);
-            T log_iter = std::log2(iter);
-            T enhanced_value = (log_iter - avg) * canvas.contrast + avg;
-            T color_index = scale<T>(enhanced_value, min, max, 0, colors.size());
-            size_t clamped_index = std::clamp<size_t>(static_cast<size_t>(color_index), 0, colors.size() - 1);
-            std::cout << colors[clamped_index] << canvas.character;
-        }
-        if (y < canvas.height - 1) {
-            std::cout << '\n';
-        } else {
-            std::cout << "\033[0m";
-            const auto x_ = static_cast<double>(x0);
-            const auto y_ = static_cast<double>(y0);
-            std::cout << "\n\t\t\tJulia set at (" << x_ << "," << y_ << "), " << max_iterations << " iterations";
-        }
+    std::vector<T> sorted = data;
+    std::nth_element(sorted.begin(), sorted.begin() + sorted.size()/2, sorted.end());
+    if (sorted.size() % 2 == 0) {
+        T m1 = *std::max_element(sorted.begin(), sorted.begin() + sorted.size()/2);
+        T m2 = *std::min_element(sorted.begin() + sorted.size()/2, sorted.end());
+        stats.median = (m1 + m2) / T(2);
+    } else {
+        stats.median = sorted[sorted.size()/2];
     }
-
+    return stats;
 }
 
 /**
+ * @brief Prints the Julia set to the console using the specified canvas properties.
+ * @tparam T The type of the numbers used for the complex numbers.
+ * @param art The canvas properties for rendering the Julia set.
+ */
+template <typename T = __float128>
+void printJuliaSet(FractalArt &art) {
+    const auto width = art.viewport.width;
+    const auto height = art.viewport.height;
+    const auto x_start = art.canvas.x_bounds.first;
+    const auto x_stop = art.canvas.x_bounds.second;
+    const auto x_range = x_stop - x_start;
+    const auto x_step = x_range / static_cast<T>(width);
+
+    const auto y_start = art.canvas.y_bounds.first;
+    const auto y_stop = art.canvas.y_bounds.second;
+    const auto y_range = y_stop - y_start;
+    const auto y_step = y_range / static_cast<T>(height);
+
+    // Prepare storage for log2(iter) values
+    std::vector<T> log_iterations(width * height);
+
+#pragma omp parallel default(none) shared(log_iterations, width, height, x_start, y_start, x_step, y_step, art)
+    {
+        #pragma omp for
+        for (size_t y = 0; y < height; ++y) {
+            for (size_t x = 0; x < width; ++x) {
+                const auto x0 = x_start + x * x_step;
+                const auto y0 = y_start + y * y_step;
+                const auto z0 = std::complex<T>(x0, y0);
+                const size_t iter = juliaSetIterations(z0, art.canvas.c, art.max_iterations);
+                const T log_iter = std::log2(iter);
+                log_iterations[y * width + x] = log_iter;
+                //std::cout<<"Iteration "<<static_cast<long double>(log_iter)<<"\n";
+            }
+        }
+    }
+
+    // Compute statistics manually
+    Stats<T> stats = compute_stats(log_iterations);
+
+    const std::vector<std::string> colors = getGrays256bitANSI(art.tone_map);
+
+    // Prepare output buffer: one string per row
+    std::vector<std::string> output(height);
+
+    // Second pass: color mapping and string construction, using precomputed z
+    #pragma omp parallel for default(none) shared(art, width, height, x_step, y_step, colors, output, stats, log_iterations)
+    for (size_t y = 0; y < height; ++y) {
+        std::string line;
+        line.reserve(width * (8 + 1)); // Estimate: color code + char
+        for (size_t x = 0; x < width; ++x) {
+            const T log_iter = log_iterations[y * width + x];
+            const T enhanced_value = (log_iter - stats.mean) * art.contrast + art.contrast * stats.mean;
+            const T color_index = scale<T>(enhanced_value, stats.min, stats.max, T(0), T(colors.size()));
+            const size_t clamped_index = std::clamp<size_t>(static_cast<size_t>(color_index), 0, colors.size() - 1);
+            line += colors[clamped_index];
+            line += art.character;
+        }
+        output[y] = std::move(line);
+    }
+
+    // Serial output
+    for (const auto& line : output) {
+        std::cout << line << '\n';
+    }
+    std::cout << "\033[0m";
+    //
+    // // Print statistics
+    // std::cout << "min: " << static_cast<long double>(stats.min)
+    //           << " max: " << static_cast<long double>(stats.max)
+    //           << " avg: " << static_cast<long double>(stats.mean)
+    //           << " p50: " << static_cast<long double>(stats.median)
+    //           << std::endl;
+}
+/**
  * @brief Draws the Julia set to a string buffer using the specified canvas properties.
  * @tparam T The type of the numbers used for the complex numbers.
- * @param canvas The canvas properties for rendering the Julia set.
- * @param x0 The real part of the constant complex number.
- * @param y0 The imaginary part of the constant complex number.
- * @param max_iterations The maximum number of iterations (default is 120).
+ * @param art The canvas properties for rendering the Julia set.
  */
-template <typename T>
-std::string drawJuliaSet(const Canvas &canvas, const T x0, const T y0, const size_t max_iterations = 120) {
+template <typename T = __float128>
+std::string drawJuliaSet(FractalArt &art) {
     // Create a string-stream to capture the output
     std::ostringstream output;
     // Redirect the standard output stream (cout) to the stringstream
     std::streambuf* originalCoutBuffer = std::cout.rdbuf(output.rdbuf());
-    printJuliaSet<T>(canvas, x0, y0, max_iterations);
+    printJuliaSet<T>(art);
     // Restore the original cout stream buffer
     std::cout.rdbuf(originalCoutBuffer);
     // Extract the captured output as a string

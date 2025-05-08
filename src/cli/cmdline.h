@@ -271,7 +271,6 @@ template <typename InputType> class CommandLine {
         if (!headerInfo.art.empty()) {
             std::cout << headerInfo.art << std::endl;
         }
-        std::cout << headerInfo.name << ": " << headerInfo.description << std::endl;
         printLine();
     }
 
@@ -302,9 +301,6 @@ template <typename InputType> class CommandLine {
             return;
         }
 
-        // print the header
-        printHeader(header);
-
         initialized = true;
         boost::program_options::options_description options("Parameters");
         buildInputArguments(options);
@@ -314,7 +310,10 @@ template <typename InputType> class CommandLine {
         boost::program_options::notify(variablesMap);
 
         // if help, print options and exit
-        if (variablesMap.count("help")) {
+        if (variablesMap.contains("help")) {
+            if (!variablesMap.contains("quiet")) {
+                printHeader(header);
+            }
             std::cout << options << "\n";
             exit(0);
         }

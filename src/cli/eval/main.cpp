@@ -10,30 +10,29 @@ namespace canopy::cli {
 class Eval : public Entrypoint<EvalInput, EvalParser, EvalOutput> {
   public:
     /**
-     * @brief Constructor for the outlab5 class
+     * @brief Constructor for the cli
      * @param args Command line arguments
      */
     explicit Eval(CommandLineArgs args) : Entrypoint(args) {}
 
   protected:
     /**
-     * @brief This function builds the header information for the project.
+     * @brief This function builds the header information for this cli
      * @return HeaderInfo object containing project information
      */
     HeaderInfo buildHeaderInfo() override {
-        canopy::utils::Canvas canvas;
-        auto x = -0.292;
-        auto y = -0.66;
-        size_t iterations = 200;
-        canvas.x_start = -0.007514104707;
-        canvas.x_stop = 0.075446744304;
-        canvas.y_start = 0.825578589953;
-        canvas.y_stop = 0.883651184261;
-        canvas.tone_map.growth_rate = 0.3;
-        canopy::utils::printJuliaSet<__float128>(canvas, x, y, iterations); //"o█■"
+
+        utils::Canvas canvas = {
+            .c = std::complex(-0.292, -0.66),
+            .x_bounds = {-0.007514104707, 0.075446744304},
+            .y_bounds = {0.825578589953, 0.883651184261},
+        };
+        utils::FractalArt art = {
+            .canvas = canvas,
+            .max_iterations = 200,
+        };
         return {
-            .name = "\n",
-            .description = "\n",
+            .art = canopy::utils::drawJuliaSet(art),
         };
     }
 
@@ -44,13 +43,6 @@ class Eval : public Entrypoint<EvalInput, EvalParser, EvalOutput> {
     static void printResults(EvalOutput &results) {
     }
 
-    /**
-     * @brief This function runs the project.
-     * @details It solves the system of linear equations using forward and back substitution.
-     * @param outputs The output vector
-     * @param inputs The input matrices
-     * @param values The variable map
-     */
     void run(EvalOutput &outputs, EvalInput &inputs, boost::program_options::variables_map &values) override {
 
         nlohmann::json results;
@@ -95,8 +87,8 @@ class Eval : public Entrypoint<EvalInput, EvalParser, EvalOutput> {
  *
  * @return The exit status of the program.
  */
-int main(int argc, char **argv) {
-    canopy::cli::CommandLineArgs args = {
+int main(const int argc, char **argv) {
+    const canopy::cli::CommandLineArgs args = {
         .argc = argc,
         .argv = argv,
     };
