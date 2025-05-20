@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=@CMAKE_INSTALL_PREFIX@
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
+
+Name: canopy
+Description: Image processing algorithms C/C++
+Version: @CANOPY_INSTALL_VERSION@
+Libs: -L${libdir} -lfilt
+Cflags: -I${includedir}

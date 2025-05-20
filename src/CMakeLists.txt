@@ -1,14 +1,18 @@
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories("${PROJECT_SOURCE_DIR}/src")
+#
+# libraries
+#
+add_library(canopy
+        ../include/canopy.h
+        canopy.cpp
+)
 
-add_subdirectory(api)
-add_subdirectory(nbits)
-add_subdirectory(bitwise)
-add_subdirectory(bool)
-add_subdirectory(cli)
-add_subdirectory(io)
-add_subdirectory(sampler)
-add_subdirectory(tree)
-add_subdirectory(utils)
-add_subdirectory(expr)
-add_subdirectory(mef)
+target_include_directories(canopy PRIVATE .)
+target_include_directories(canopy PUBLIC ../include)
+
+#target_link_libraries(canopy PUBLIC ggml)
+
+if (BUILD_SHARED_LIBS)
+    set_target_properties(canopy PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_compile_definitions(canopy PRIVATE CANOPY_BUILD)
+    target_compile_definitions(canopy PUBLIC  CANOPY_SHARED)
+endif()
