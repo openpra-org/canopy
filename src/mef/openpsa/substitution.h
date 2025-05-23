@@ -10,7 +10,7 @@
 
 #include "mef/openpsa/algorithm.h"
 #include "mef/openpsa/element.h"
-#include "mef/openpsa/event.h"
+#include "mef/openpsa/event/event.h"
 
 namespace mef::openpsa {
 

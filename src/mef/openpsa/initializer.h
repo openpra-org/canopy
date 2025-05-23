@@ -21,7 +21,7 @@
 #include "mef/openpsa/alignment.h"
 #include "mef/openpsa/ccf_group.h"
 #include "mef/openpsa/element.h"
-#include "mef/openpsa/event.h"
+#include "mef/openpsa/event/event.h"
 #include "mef/openpsa/event_tree.h"
 #include "mef/openpsa/expression.h"
 #include "mef/openpsa/fault_tree.h"

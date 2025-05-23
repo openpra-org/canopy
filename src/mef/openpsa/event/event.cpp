@@ -6,7 +6,7 @@
 
 #include <boost/range/algorithm.hpp>
 
-#include "mef/openpsa/event.h"
+#include "mef/openpsa/event/event.h"
 #include "mef/openpsa/error.h"
 #include "mef/openpsa/algorithm.h"
 #include "mef/openpsa/variant.h"
