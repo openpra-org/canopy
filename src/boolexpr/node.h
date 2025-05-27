@@ -53,8 +53,8 @@ struct TernaryOperatorNode {
     TernaryOperatorType op{};
 
     NodePtr<NameType> condition{};
-    NodePtr<NameType> success_branch{};
-    NodePtr<NameType> failure_branch{};
+    NodePtr<NameType> success{};
+    NodePtr<NameType> failure{};
 };
 
 

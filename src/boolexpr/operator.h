@@ -1,8 +1,6 @@
 #ifndef BOOLEXPR_OPERATOR_H
 #define BOOLEXPR_OPERATOR_H
 
-#include <format>
-
 namespace canopy::boolexpr {
 
 enum class UnaryOperatorType {
