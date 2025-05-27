@@ -25,6 +25,12 @@ option(BUILD_BENCHMARKS "Build benchmarks" ON)
 ######################### Options ################################################## }}}
 
 #
+# FetchContent For Dependencies
+#
+Include(FetchContent)
+
+
+#
 # build the library
 #
 add_subdirectory(src)
