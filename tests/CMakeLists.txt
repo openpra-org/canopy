@@ -7,4 +7,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_subdirectory(boolexpr)
-
+add_subdirectory(io)

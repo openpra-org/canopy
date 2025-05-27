@@ -5,11 +5,11 @@ FetchContent_Declare(
         GIT_TAG v2.14.3 # Use a specific stable tag or branch
 )
 # Optionally, set options for libxml2 build
-set(LIBXML2_WITH_PYTHON ON CACHE BOOL "" FORCE)
+set(LIBXML2_WITH_TESTS OFF CACHE BOOL "" FORCE)
+set(LIBXML2_WITH_PYTHON OFF CACHE BOOL "" FORCE)
 set(LIBXML2_WITH_LZMA ON CACHE BOOL "" FORCE)
 set(LIBXML2_WITH_ICONV ON CACHE BOOL "" FORCE)
 set(LIBXML2_WITH_ZLIB ON CACHE BOOL "" FORCE)
-set(LIBXML2_WITH_TESTS OFF CACHE BOOL "" FORCE)
 set(LIBXML2_WITH_PROGRAMS ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(libxml2)
 
