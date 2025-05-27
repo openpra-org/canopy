@@ -103,6 +103,7 @@ struct formatter<canopy::boolexpr::BinaryOperatorType> {
     }
 };
 
+
 template <>
 struct std::formatter<canopy::boolexpr::TernaryOperatorType> {
     enum class Format {
