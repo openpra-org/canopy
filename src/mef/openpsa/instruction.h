@@ -10,7 +10,7 @@
 #include <boost/noncopyable.hpp>
 
 #include "mef/openpsa/element.h"
-#include "mef/openpsa/event.h"
+#include "mef/openpsa/event/event.h"
 #include "mef/openpsa/expression.h"
 
 namespace mef::openpsa {

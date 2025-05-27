@@ -14,7 +14,7 @@
 
 #include "mef/openpsa/element.h"
 #include "mef/openpsa/error.h"
-#include "mef/openpsa/event.h"
+#include "mef/openpsa/event/event.h"
 #include "mef/openpsa/event_tree.h"
 #include "mef/openpsa/instruction.h"
 #include "mef/openpsa/parameter.h"

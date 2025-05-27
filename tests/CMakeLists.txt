@@ -1,9 +1,10 @@
-# for boost tests
-find_package(_boost COMPONENTS unit_test_framework REQUIRED)
+FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.4.0 # or a later release
+)
 
-add_subdirectory(bitwise)
-add_subdirectory(bool)
-add_subdirectory(nbits)
+FetchContent_MakeAvailable(Catch2)
+
+add_subdirectory(boolexpr)
 add_subdirectory(io)
-add_subdirectory(device_compilation)
-add_subdirectory(sampler)

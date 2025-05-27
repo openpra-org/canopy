@@ -10,7 +10,7 @@
 
 #include "mef/openpsa/ccf_group.h"
 #include "mef/openpsa/element.h"
-#include "mef/openpsa/event.h"
+#include "mef/openpsa/event/event.h"
 #include "mef/openpsa/parameter.h"
 
 namespace mef::openpsa {

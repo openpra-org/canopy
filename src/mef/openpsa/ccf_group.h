@@ -21,7 +21,7 @@
 #include "mef/openpsa/expr/constant.h"
 #include "mef/openpsa/expr/numerical.h"
 #include "mef/openpsa/element.h"
-#include "mef/openpsa/event.h"
+#include "mef/openpsa/event/event.h"
 #include "mef/openpsa/expression.h"
 
 namespace mef::openpsa {
