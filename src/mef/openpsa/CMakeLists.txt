@@ -12,7 +12,7 @@ set(MEF_OPENPSA_HEADERS
         instruction.h
         expression.h
         algorithm.h
-        event.h
+        event/event.h
         variant.h
         ccf_group.h
         expr/numerical.h
@@ -34,7 +34,7 @@ set(MEF_OPENPSA_HEADERS
 )
 
 set(MEF_OPENPSA_SOURCES
-        event.cpp
+        event/event.cpp
         initializer.cpp
 )
 
