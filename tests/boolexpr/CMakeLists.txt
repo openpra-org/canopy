@@ -1,0 +1,3 @@
+add_executable(test_boolexpr_basic basic.cpp)
+
+target_link_libraries(test_boolexpr_basic PRIVATE boolexpr Catch2::Catch2WithMain)

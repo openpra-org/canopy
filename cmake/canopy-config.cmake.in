@@ -9,7 +9,7 @@ set_and_check(CANOPY_INCLUDE_DIR "@PACKAGE_CANOPY_INCLUDE_INSTALL_DIR@")
 set_and_check(CANOPY_LIB_DIR     "@PACKAGE_CANOPY_LIB_INSTALL_DIR@")
 set_and_check(CANOPY_BIN_DIR     "@PACKAGE_CANOPY_BIN_INSTALL_DIR@")
 
-find_library(filt_LIBRARY canopy
+find_library(canopy_LIBRARY canopy
     REQUIRED
     HINTS ${CANOPY_LIB_DIR}
     NO_CMAKE_FIND_ROOT_PATH
@@ -21,7 +21,7 @@ set_target_properties(canopy
         INTERFACE_INCLUDE_DIRECTORIES "${CANOPY_INCLUDE_DIR}"
         #INTERFACE_LINK_LIBRARIES "ggml::ggml;ggml::ggml-base;"
         IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
-        IMPORTED_LOCATION "${filt_LIBRARY}"
+        IMPORTED_LOCATION "${canopy_LIBRARY}"
         INTERFACE_COMPILE_FEATURES c_std_90
         POSITION_INDEPENDENT_CODE ON)
 

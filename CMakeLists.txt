@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.29)
+cmake_minimum_required (VERSION 3.24)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,6 +23,12 @@ option(BUILD_TESTS "Build tests" ON)  # Influences CTest.
 option(BUILD_EXAMPLES "Build examples" ON)
 option(BUILD_BENCHMARKS "Build benchmarks" ON)
 ######################### Options ################################################## }}}
+
+#
+# FetchContent For Dependencies
+#
+Include(FetchContent)
+
 
 #
 # build the library
