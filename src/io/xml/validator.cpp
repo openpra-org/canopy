@@ -8,7 +8,7 @@
 
 #include "io/xml/validator.h"
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 /**
  * @brief Constructs a validator by loading and parsing a RelaxNG schema file.

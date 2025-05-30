@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <libxml/xinclude.h>
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 /**
  * @brief Constructs and parses an XML document from a file, with optional validation.

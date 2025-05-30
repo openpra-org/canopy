@@ -4,7 +4,7 @@
 
 #include <limits>
 
-#include <boost/range/algorithm.hpp>
+// #include <boost/range/algorithm.hpp>
 
 #include "mef/openpsa/event/event.h"
 #include "mef/openpsa/error.h"

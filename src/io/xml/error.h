@@ -13,7 +13,7 @@
 #include <string>
 #include <string_view>
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 /**
  * @enum error_type

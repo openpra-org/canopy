@@ -13,7 +13,7 @@
 #include <memory>
 #include <string>
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 class document;
 

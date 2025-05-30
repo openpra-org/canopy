@@ -1,5 +1,3 @@
-find_package(LibXml2 REQUIRED)
-
 set(MEF_OPENPSA_HEADERS
         alignment.h
         error.h
@@ -40,7 +38,7 @@ set(MEF_OPENPSA_SOURCES
 
 add_library(mef_openpsa STATIC ${MEF_OPENPSA_SOURCES} ${MEF_OPENPSA_HEADERS})
 set_target_properties(mef_openpsa PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(mef_openpsa PRIVATE io_xml LibXml2::LibXml2)
+target_link_libraries(mef_openpsa PRIVATE io_xml)
 
 
 install(TARGETS mef_openpsa

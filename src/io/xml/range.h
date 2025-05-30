@@ -11,7 +11,7 @@
 #include <iterator>
 #include <libxml/tree.h>
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 class element;
 

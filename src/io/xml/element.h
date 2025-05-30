@@ -18,7 +18,7 @@
 #include <string_view>
 #include <type_traits>
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 /**
  * @class element

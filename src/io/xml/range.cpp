@@ -12,7 +12,7 @@
 #include <cassert>
 #include <iterator>
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 // ────────────────────────────────────────────────────────────────────────────
 //  range::iterator implementation

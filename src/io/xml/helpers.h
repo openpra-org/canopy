@@ -13,7 +13,7 @@
 #include <string_view>
 #include <type_traits>
 
-namespace canopy::io::xml::helpers {
+namespace io::xml::helpers {
 
 /**
  * @brief Converts a string view to a numeric or boolean value.

@@ -15,7 +15,7 @@
 #include "io/xml/validator.h"
 #include "io/xml/element.h"
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 class validator;
 

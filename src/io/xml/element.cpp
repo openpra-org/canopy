@@ -8,7 +8,7 @@
 
 #include "io/xml/element.h"
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 /**
  * @brief Constructs an element adaptor from a non-null xmlElement pointer.

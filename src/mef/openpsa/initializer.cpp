@@ -3,12 +3,15 @@
 
 #include "mef/openpsa/initializer.h"
 
+#include "io/xml/document.h"
+#include "io/xml/element.h"
+#include "io/xml/range.h"
+#include "io/xml/validator.h"
+
 #include <functional>  // std::mem_fn
 #include <sstream>
 #include <type_traits>
 
-#include <boost/exception/errinfo_at_line.hpp>
-#include <boost/exception/errinfo_file_name.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <boost/range/adaptor/filtered.hpp>
@@ -64,17 +67,17 @@ RoleSpecifier GetRole(const std::string_view& s, RoleSpecifier parent_role) {
 /// @param[out] element  The object that needs attributes and label.
 ///
 /// @throws ValidityError  Invalid attribute setting.
-void AttachLabelAndAttributes(const io::xml::Element& xml_element,
+void AttachLabelAndAttributes(const io::xml::element& xml_element,
                              Element* element) {
-   if (std::optional<io::xml::Element> label = xml_element.child("label")) {
+   if (std::optional<io::xml::element> label = xml_element.child("label")) {
        assert(element->label().empty() && "Resetting element label.");
        element->label(std::string(label->text()));
    }
 
-   std::optional<io::xml::Element> attributes = xml_element.child("attributes");
+   std::optional<io::xml::element> attributes = xml_element.child("attributes");
    if (!attributes)
        return;
-   for (const io::xml::Element& attribute : attributes->children()) {
+   for (const io::xml::element& attribute : attributes->children()) {
        assert(attribute.name() == "attribute");
        try {
            element->AddAttribute({std::string(attribute.attribute("name")),
@@ -90,7 +93,7 @@ void AttachLabelAndAttributes(const io::xml::Element& xml_element,
 /// Constructs Element of type T from an XML element.
 template <class T>
 std::enable_if_t<std::is_base_of_v<Element, T>, std::unique_ptr<T>>
-ConstructElement(const io::xml::Element& xml_element) {
+ConstructElement(const io::xml::element& xml_element) {
    auto element =
        std::make_unique<T>(std::string(xml_element.attribute("name")));
    AttachLabelAndAttributes(xml_element, element.get());
@@ -100,7 +103,7 @@ ConstructElement(const io::xml::Element& xml_element) {
 /// Constructs Element of type T with a role from an XML element.
 template <class T>
 std::enable_if_t<std::is_base_of_v<Role, T>, std::unique_ptr<T>>
-ConstructElement(const io::xml::Element& xml_element, const std::string& base_path,
+ConstructElement(const io::xml::element& xml_element, const std::string& base_path,
                 RoleSpecifier base_role) {
    auto element =
        std::make_unique<T>(std::string(xml_element.attribute("name")), base_path,
@@ -114,9 +117,9 @@ ConstructElement(const io::xml::Element& xml_element, const std::string& base_pa
 /// @param[in] xml_element  The XML element with the construct definition.
 ///
 /// @returns A range of XML child elements of MEF Element constructs.
-auto GetNonAttributeElements(const io::xml::Element& xml_element) {
+auto GetNonAttributeElements(const io::xml::element& xml_element) {
    return xml_element.children() |
-          boost::adaptors::filtered([](const io::xml::Element& child) {
+          boost::adaptors::filtered([](const io::xml::element& child) {
               std::string_view name = child.name();
               return name != "label" && name != "attributes";
           });
@@ -124,7 +127,7 @@ auto GetNonAttributeElements(const io::xml::Element& xml_element) {
 
 template <>
 std::unique_ptr<Phase>
-ConstructElement<Phase>(const io::xml::Element& xml_element) {
+ConstructElement<Phase>(const io::xml::element& xml_element) {
    std::unique_ptr<Phase> element;
    try {
        element = std::make_unique<Phase>(
@@ -142,7 +145,7 @@ ConstructElement<Phase>(const io::xml::Element& xml_element) {
 
 [[maybe_unused]] Initializer::Initializer(const std::vector<std::string>& xml_files,
                         Settings settings, bool allow_extern,
-                        io::xml::Validator* extra_validator)
+                        io::xml::validator* extra_validator)
    : settings_(std::move(settings)),
      allow_extern_(allow_extern),
      extra_validator_(extra_validator) {
@@ -253,7 +256,7 @@ void Initializer::ProcessInputFiles(const std::vector<std::string>& xml_files) {
    // Expand wildcards before proceeding
    std::vector<std::string> expanded_files = ExpandWildcards(xml_files);
 
-   io::xml::Validator validator(env::input_schema());
+   io::xml::validator validator(env::input_schema());
 
 //   CLOCK(input_time);
 //   LOG(DEBUG1) << "Processing input files";
@@ -262,14 +265,14 @@ void Initializer::ProcessInputFiles(const std::vector<std::string>& xml_files) {
    for (const auto& xml_file : expanded_files) {
 //       CLOCK(parse_time);
 //       LOG(DEBUG3) << "Parsing " << xml_file << " ...";
-       io::xml::Document document(xml_file, &validator);
+       io::xml::document document(xml_file, &validator);
        if (extra_validator_)
            extra_validator_->validate(document);
        documents_.emplace_back(std::move(document));
 //       LOG(DEBUG3) << "Parsed " << xml_file << " in " << DUR(parse_time);
    }
 //   CLOCK(def_time);
-   for (const io::xml::Document& document : documents_) {
+   for (const io::xml::document& document : documents_) {
        try {
            ProcessInputFile(document);
        } catch (ValidityError& err) {
@@ -298,7 +301,7 @@ void Initializer::ProcessInputFiles(const std::vector<std::string>& xml_files) {
 
 template <class T>
 void Initializer::Register(std::unique_ptr<T> element,
-                          const io::xml::Element& xml_element) {
+                          const io::xml::element& xml_element) {
    try {
        model_->Add(std::move(element));
    } catch (ValidityError& err) {
@@ -310,7 +313,7 @@ void Initializer::Register(std::unique_ptr<T> element,
 /// Specializations for element registrations.
 /// @{
 template <>
-Gate* Initializer::Register(const io::xml::Element& gate_node,
+Gate* Initializer::Register(const io::xml::element& gate_node,
                            const std::string& base_path,
                            RoleSpecifier container_role) {
    std::unique_ptr<Gate> ptr =
@@ -323,7 +326,7 @@ Gate* Initializer::Register(const io::xml::Element& gate_node,
 }
 
 template <>
-BasicEvent* Initializer::Register(const io::xml::Element& event_node,
+BasicEvent* Initializer::Register(const io::xml::element& event_node,
                                  const std::string& base_path,
                                  RoleSpecifier container_role) {
    std::unique_ptr<BasicEvent> ptr =
@@ -336,7 +339,7 @@ BasicEvent* Initializer::Register(const io::xml::Element& event_node,
 }
 
 template <>
-HouseEvent* Initializer::Register(const io::xml::Element& event_node,
+HouseEvent* Initializer::Register(const io::xml::element& event_node,
                                  const std::string& base_path,
                                  RoleSpecifier container_role) {
    std::unique_ptr<HouseEvent> ptr =
@@ -346,14 +349,14 @@ HouseEvent* Initializer::Register(const io::xml::Element& event_node,
    path_house_events_.insert(house_event);
 
    // Only Boolean xml.
-   if (std::optional<io::xml::Element> constant = event_node.child("constant")) {
+   if (std::optional<io::xml::element> constant = event_node.child("constant")) {
        house_event->state(*constant->attribute<bool>("value"));
    }
    return house_event;
 }
 
 template <>
-Parameter* Initializer::Register(const io::xml::Element& param_node,
+Parameter* Initializer::Register(const io::xml::element& param_node,
                                 const std::string& base_path,
                                 RoleSpecifier container_role) {
    std::unique_ptr<Parameter> ptr =
@@ -374,7 +377,7 @@ Parameter* Initializer::Register(const io::xml::Element& param_node,
 }
 
 template <>
-CcfGroup* Initializer::Register(const io::xml::Element& ccf_node,
+CcfGroup* Initializer::Register(const io::xml::element& ccf_node,
                                const std::string& base_path,
                                RoleSpecifier container_role) {
    auto ptr = [&]() -> std::unique_ptr<CcfGroup> {
@@ -401,7 +404,7 @@ CcfGroup* Initializer::Register(const io::xml::Element& ccf_node,
 }
 
 template <>
-Sequence* Initializer::Register(const io::xml::Element& xml_node,
+Sequence* Initializer::Register(const io::xml::element& xml_node,
                                const std::string& /*base_path*/,
                                RoleSpecifier /*container_role*/) {
    std::unique_ptr<Sequence> ptr = ConstructElement<Sequence>(xml_node);
@@ -412,16 +415,16 @@ Sequence* Initializer::Register(const io::xml::Element& xml_node,
 }
 /// @}
 
-void Initializer::ProcessInputFile(const io::xml::Document& document) {
-   io::xml::Element root = document.root();
+void Initializer::ProcessInputFile(const io::xml::document& document) {
+   io::xml::element root = document.root();
    assert(root.name() == "opsa-mef");
 
    if (!model_) {  // Create only one model for multiple files.
-       model_ = ConstructElement<Model>(root);
+       model_ = ConstructElement<model>(root);
        model_->mission_time().value(settings_.mission_time());
    }
 
-   for (const io::xml::Element& node : root.children()) {
+   for (const io::xml::element& node : root.children()) {
        if (node.name() == "define-initiating-event") {
            std::unique_ptr<InitiatingEvent> initiating_event =
                ConstructElement<InitiatingEvent>(node);
@@ -475,7 +478,7 @@ void Initializer::ProcessInputFile(const io::xml::Document& document) {
 /// Specializations for elements defined after registration.
 /// @{
 template <>
-void Initializer::Define(const io::xml::Element& gate_node, Gate* gate) {
+void Initializer::Define(const io::xml::element& gate_node, Gate* gate) {
    auto formulas = GetNonAttributeElements(gate_node);
    // Assumes that there are no attributes and labels.
    assert(!formulas.empty() && ++formulas.begin() == formulas.end());
@@ -484,7 +487,7 @@ void Initializer::Define(const io::xml::Element& gate_node, Gate* gate) {
 }
 
 template <>
-void Initializer::Define(const io::xml::Element& event_node,
+void Initializer::Define(const io::xml::element& event_node,
                         BasicEvent* basic_event) {
    auto expressions = GetNonAttributeElements(event_node);
    if (!expressions.empty()) {
@@ -497,7 +500,7 @@ void Initializer::Define(const io::xml::Element& event_node,
 }
 
 template <>
-void Initializer::Define(const io::xml::Element& param_node, Parameter* parameter) {
+void Initializer::Define(const io::xml::element& param_node, Parameter* parameter) {
    auto expressions = GetNonAttributeElements(param_node);
    assert(!expressions.empty() && ++expressions.begin() == expressions.end());
    parameter->expression(
@@ -505,8 +508,8 @@ void Initializer::Define(const io::xml::Element& param_node, Parameter* paramete
 }
 
 template <>
-void Initializer::Define(const io::xml::Element& ccf_node, CcfGroup* ccf_group) {
-   for (const io::xml::Element& element : ccf_node.children()) {
+void Initializer::Define(const io::xml::element& ccf_node, CcfGroup* ccf_group) {
+   for (const io::xml::element& element : ccf_node.children()) {
        std::string_view name = element.name();
        if (name == "distribution") {
            ccf_group->AddDistribution(
@@ -516,24 +519,24 @@ void Initializer::Define(const io::xml::Element& ccf_node, CcfGroup* ccf_group) 
            DefineCcfFactor(element, ccf_group);
 
        } else if (name == "factors") {
-           for (const io::xml::Element& factor_node : element.children())
+           for (const io::xml::element& factor_node : element.children())
                DefineCcfFactor(factor_node, ccf_group);
        }
    }
 }
 
 template <>
-void Initializer::Define(const io::xml::Element& xml_node, Sequence* sequence) {
+void Initializer::Define(const io::xml::element& xml_node, Sequence* sequence) {
    std::vector<Instruction*> instructions;
-   for (const io::xml::Element& node : GetNonAttributeElements(xml_node)) {
+   for (const io::xml::element& node : GetNonAttributeElements(xml_node)) {
        instructions.emplace_back(GetInstruction(node));
    }
    sequence->instructions(std::move(instructions));
 }
 
 template <>
-void Initializer::Define(const io::xml::Element& et_node, EventTree* event_tree) {
-   for (const io::xml::Element& node : et_node.children("define-branch")) {
+void Initializer::Define(const io::xml::element& et_node, EventTree* event_tree) {
+   for (const io::xml::element& node : et_node.children("define-branch")) {
        auto it = find(event_tree->table<NamedBranch>(),
                            std::string(node.attribute("name")));
        assert(it);
@@ -546,7 +549,7 @@ void Initializer::Define(const io::xml::Element& et_node, EventTree* event_tree)
 }
 
 template <>
-void Initializer::Define(const io::xml::Element& xml_node,
+void Initializer::Define(const io::xml::element& xml_node,
                         InitiatingEvent* initiating_event) {
    std::string_view event_tree_name = xml_node.attribute("event-tree");
    if (!event_tree_name.empty()) {
@@ -564,20 +567,20 @@ void Initializer::Define(const io::xml::Element& xml_node,
 }
 
 template <>
-void Initializer::Define(const io::xml::Element& rule_node, Rule* rule) {
+void Initializer::Define(const io::xml::element& rule_node, Rule* rule) {
    std::vector<Instruction*> instructions;
-   for (const io::xml::Element& xml_node : GetNonAttributeElements(rule_node))
+   for (const io::xml::element& xml_node : GetNonAttributeElements(rule_node))
        instructions.push_back(GetInstruction(xml_node));
    rule->instructions(std::move(instructions));
 }
 
 template <>
-void Initializer::Define(const io::xml::Element& xml_node, Alignment* alignment) {
-   for (const io::xml::Element& node : xml_node.children("define-phase")) {
+void Initializer::Define(const io::xml::element& xml_node, Alignment* alignment) {
+   for (const io::xml::element& node : xml_node.children("define-phase")) {
        try {
            std::unique_ptr<Phase> phase = ConstructElement<Phase>(node);
            std::vector<SetHouseEvent*> instructions;
-           for (const io::xml::Element& arg : node.children("set-house-event")) {
+           for (const io::xml::element& arg : node.children("set-house-event")) {
                instructions.push_back(
                    static_cast<SetHouseEvent*>(GetInstruction(arg)));
            }
@@ -597,13 +600,13 @@ void Initializer::Define(const io::xml::Element& xml_node, Alignment* alignment)
 }
 
 template <>
-void Initializer::Define(const io::xml::Element& xml_node,
+void Initializer::Define(const io::xml::element& xml_node,
                         Substitution* substitution) {
    substitution->hypothesis(
        GetFormula(xml_node.child("hypothesis")->child().value(), ""));
 
-   if (std::optional<io::xml::Element> source = xml_node.child("source")) {
-       for (const io::xml::Element& basic_event : source->children()) {
+   if (std::optional<io::xml::element> source = xml_node.child("source")) {
+       for (const io::xml::element& basic_event : source->children()) {
            assert(basic_event.name() == "basic-event");
            try {
                BasicEvent* event = GetBasicEvent(basic_event.attribute("name"), "");
@@ -617,7 +620,7 @@ void Initializer::Define(const io::xml::Element& xml_node,
        assert(substitution->source().empty() == false);
    }
 
-   io::xml::Element target = xml_node.child("target")->child().value();
+   io::xml::element target = xml_node.child("target")->child().value();
    if (target.name() == "basic-event") {
        try {
            BasicEvent* event = GetBasicEvent(target.attribute("name"), "");
@@ -653,9 +656,9 @@ void Initializer::Define(const io::xml::Element& xml_node,
 /// @}
 
 void Initializer::ProcessTbdElements() {
-   for (const io::xml::Document& document : documents_) {
-       io::xml::Element root = document.root();
-       for (const io::xml::Element& node : root.children("define-extern-function")) {
+   for (const io::xml::document& document : documents_) {
+       io::xml::element root = document.root();
+       for (const io::xml::element& node : root.children("define-extern-function")) {
            try {
                DefineExternFunction(node);
            } catch (ValidityError& err) {
@@ -681,9 +684,9 @@ void Initializer::ProcessTbdElements() {
    }
 }
 
-void Initializer::DefineEventTree(const io::xml::Element& et_node) {
+void Initializer::DefineEventTree(const io::xml::element& et_node) {
    std::unique_ptr<EventTree> event_tree = ConstructElement<EventTree>(et_node);
-   for (const io::xml::Element& node : et_node.children()) {
+   for (const io::xml::element& node : et_node.children()) {
        if (node.name() == "define-sequence") {
            event_tree->Add(
                Register<Sequence>(node, event_tree->name(), RoleSpecifier::kPublic));
@@ -709,14 +712,14 @@ void Initializer::DefineEventTree(const io::xml::Element& et_node) {
    tbd_.emplace_back(tbd_element, et_node);
 }
 
-void Initializer::DefineFaultTree(const io::xml::Element& ft_node) {
+void Initializer::DefineFaultTree(const io::xml::element& ft_node) {
    std::unique_ptr<FaultTree> fault_tree = ConstructElement<FaultTree>(ft_node);
    RegisterFaultTreeData(ft_node, fault_tree->name(), fault_tree.get());
    Register(std::move(fault_tree), ft_node);
 }
 
 std::unique_ptr<Component> Initializer::DefineComponent(
-   const io::xml::Element& component_node, const std::string& base_path,
+   const io::xml::element& component_node, const std::string& base_path,
    RoleSpecifier container_role) {
    std::unique_ptr<Component> component =
        ConstructElement<Component>(component_node, base_path, container_role);
@@ -725,10 +728,10 @@ std::unique_ptr<Component> Initializer::DefineComponent(
    return component;
 }
 
-void Initializer::RegisterFaultTreeData(const io::xml::Element& ft_node,
+void Initializer::RegisterFaultTreeData(const io::xml::element& ft_node,
                                        const std::string& base_path,
                                        Component* component) {
-   for (const io::xml::Element& node : ft_node.children()) {
+   for (const io::xml::element& node : ft_node.children()) {
        if (node.name() == "define-basic-event") {
            component->Add(Register<BasicEvent>(node, base_path, component->role()));
 
@@ -757,8 +760,8 @@ void Initializer::RegisterFaultTreeData(const io::xml::Element& ft_node,
    }
 }
 
-void Initializer::ProcessModelData(const io::xml::Element& model_data) {
-   for (const io::xml::Element& node : model_data.children()) {
+void Initializer::ProcessModelData(const io::xml::element& model_data) {
+   for (const io::xml::element& node : model_data.children()) {
        if (node.name() == "define-basic-event") {
            Register<BasicEvent>(node, "", RoleSpecifier::kPublic);
        } else if (node.name() == "define-parameter") {
@@ -770,7 +773,7 @@ void Initializer::ProcessModelData(const io::xml::Element& model_data) {
 }
 
 std::unique_ptr<Formula> Initializer::GetFormula(
-   const io::xml::Element& formula_node, const std::string& base_path) {
+   const io::xml::element& formula_node, const std::string& base_path) {
    Connective formula_type = [&formula_node]() {
        if (formula_node.has_attribute("name") || formula_node.name() == "constant")
            return kNull;
@@ -782,7 +785,7 @@ std::unique_ptr<Formula> Initializer::GetFormula(
 
    Formula::ArgSet arg_set;
 
-   auto add_event = [this, &arg_set, &base_path](const io::xml::Element& element,
+   auto add_event = [this, &arg_set, &base_path](const io::xml::element& element,
                                                  bool complement) {
        std::string_view element_type = [&element] {
            // This is for the case "<event name="id" type="type"/>".
@@ -817,7 +820,7 @@ std::unique_ptr<Formula> Initializer::GetFormula(
        }
    };
 
-   auto add_arg = [this, &arg_set, &add_event](const io::xml::Element& element) {
+   auto add_arg = [this, &arg_set, &add_event](const io::xml::element& element) {
        if (element.name() == "constant") {
            arg_set.Add(*element.attribute<bool>("value") ? &HouseEvent::kTrue
                                                          : &HouseEvent::kFalse);
@@ -836,7 +839,7 @@ std::unique_ptr<Formula> Initializer::GetFormula(
    if (formula_type == kNull) {  // Special case of pass-through.
        add_arg(formula_node);
    } else {
-       for (const io::xml::Element& node : formula_node.children())
+       for (const io::xml::element& node : formula_node.children())
            add_arg(node);
    }
 
@@ -850,14 +853,14 @@ std::unique_ptr<Formula> Initializer::GetFormula(
    }
 }
 
-void Initializer::DefineBranchTarget(const io::xml::Element& target_node,
+void Initializer::DefineBranchTarget(const io::xml::element& target_node,
                                     EventTree* event_tree, Branch* branch) {
    try {
        if (target_node.name() == "fork") {
            auto& functional_event = event_tree->Get<FunctionalEvent>(
                target_node.attribute("functional-event"));
            std::vector<Path> paths;
-           for (const io::xml::Element& path_element : target_node.children("path")) {
+           for (const io::xml::element& path_element : target_node.children("path")) {
                paths.emplace_back(std::string(path_element.attribute("state")));
                DefineBranch(path_element.children(), event_tree, &paths.back());
            }
@@ -905,7 +908,7 @@ void Initializer::DefineBranch(const SinglePassRange& xml_nodes,
    branch->instructions(std::move(instructions));
 }
 
-Instruction* Initializer::GetInstruction(const io::xml::Element& xml_element) {
+Instruction* Initializer::GetInstruction(const io::xml::element& xml_element) {
    std::string_view node_name = xml_element.name();
    auto invoke = [&xml_element](auto&& action) {
        try {
@@ -951,7 +954,7 @@ Instruction* Initializer::GetInstruction(const io::xml::Element& xml_element) {
    }
 
    if (node_name == "if") {
-       io::xml::Element::Range args = xml_element.children();
+       io::xml::range args = xml_element.children();
        auto it = args.begin();
        Expression* if_expression = GetExpression(*it++, "");
        Instruction* then_instruction = GetInstruction(*it++);
@@ -964,7 +967,7 @@ Instruction* Initializer::GetInstruction(const io::xml::Element& xml_element) {
 
    if (node_name == "block") {
        std::vector<Instruction*> instructions;
-       for (const io::xml::Element& xml_node : xml_element.children())
+       for (const io::xml::element& xml_node : xml_element.children())
            instructions.push_back(GetInstruction(xml_node));
        return register_instruction(
            std::make_unique<Block>(std::move(instructions)));
@@ -995,7 +998,7 @@ struct Initializer::Extractor {
    /// @returns The extracted expression.
    ///
    /// @pre The XML args container size equals N.
-   std::unique_ptr<T> operator()(const io::xml::Element::Range& args,
+   std::unique_ptr<T> operator()(const io::xml::range& args,
                                  const std::string& base_path,
                                  Initializer* init) {
        static_assert(N > 0, "The number of arguments can't be fewer than 1.");
@@ -1017,8 +1020,8 @@ struct Initializer::Extractor {
    ///
    /// @pre The XML container has enough arguments.
    template <class... Ts>
-   std::unique_ptr<T> operator()(io::xml::Element::Range::iterator it,
-                                 io::xml::Element::Range::iterator it_end,
+   std::unique_ptr<T> operator()(io::xml::range::iterator it,
+                                 io::xml::range::iterator it_end,
                                  const std::string& base_path, Initializer* init,
                                  Ts&&... expressions) {
        static_assert(N >= 0);
@@ -1047,11 +1050,11 @@ struct Initializer::Extractor<T, -1> {
    /// @param[in,out] init  The host Initializer.
    ///
    /// @returns The constructed expression.
-   std::unique_ptr<T> operator()(const io::xml::Element::Range& args,
+   std::unique_ptr<T> operator()(const io::xml::range& args,
                                  const std::string& base_path,
                                  Initializer* init) {
        std::vector<Expression*> expr_args;
-       for (const io::xml::Element& node : args) {
+       for (const io::xml::element& node : args) {
            expr_args.push_back(init->GetExpression(node, base_path));
        }
        return std::make_unique<T>(std::move(expr_args));
@@ -1086,7 +1089,7 @@ constexpr std::enable_if_t<std::is_base_of_v<Expression, T>, int> num_args() {
 
 template <class T>
 std::unique_ptr<Expression>
-Initializer::Extract(const io::xml::Element::Range& args,
+Initializer::Extract(const io::xml::range& args,
                     const std::string& base_path, Initializer* init) {
    return Extractor<T, num_args<T>()>()(args, base_path, init);
 }
@@ -1094,14 +1097,14 @@ Initializer::Extract(const io::xml::Element::Range& args,
 /// Specialization for Extractor of Histogram expressions.
 template <>
 std::unique_ptr<Expression>
-Initializer::Extract<Histogram>(const io::xml::Element::Range& args,
+Initializer::Extract<Histogram>(const io::xml::range& args,
                                const std::string& base_path,
                                Initializer* init) {
    auto it = args.begin();
    std::vector<Expression*> boundaries = {init->GetExpression(*it, base_path)};
    std::vector<Expression*> weights;
    for (++it; it != args.end(); ++it) {
-       io::xml::Element::Range bin = it->children();
+       io::xml::range bin = it->children();
        assert(bin.size() == 2);
        auto it_bin = bin.begin();
        boundaries.push_back(init->GetExpression(*it_bin++, base_path));
@@ -1114,7 +1117,7 @@ Initializer::Extract<Histogram>(const io::xml::Element::Range& args,
 /// Specialization due to overloaded constructors.
 template <>
 std::unique_ptr<Expression>
-Initializer::Extract<LognormalDeviate>(const io::xml::Element::Range& args,
+Initializer::Extract<LognormalDeviate>(const io::xml::range& args,
                                       const std::string& base_path,
                                       Initializer* init) {
    if (args.size() == 3)
@@ -1125,7 +1128,7 @@ Initializer::Extract<LognormalDeviate>(const io::xml::Element::Range& args,
 /// Specialization due to overloaded constructors and un-fixed number of args.
 template <>
 std::unique_ptr<Expression>
-Initializer::Extract<PeriodicTest>(const io::xml::Element::Range& args,
+Initializer::Extract<PeriodicTest>(const io::xml::range& args,
                                   const std::string& base_path,
                                   Initializer* init) {
    switch (args.size()) {
@@ -1144,7 +1147,7 @@ Initializer::Extract<PeriodicTest>(const io::xml::Element::Range& args,
 /// Specialization for Switch-Case operation extraction.
 template <>
 std::unique_ptr<Expression>
-Initializer::Extract<Switch>(const io::xml::Element::Range& args,
+Initializer::Extract<Switch>(const io::xml::range& args,
                             const std::string& base_path, Initializer* init) {
    assert(!args.empty());
    Expression* default_value = nullptr;
@@ -1155,7 +1158,7 @@ Initializer::Extract<Switch>(const io::xml::Element::Range& args,
            default_value = init->GetExpression(*it_cur, base_path);
            break;
        }
-       io::xml::Element::Range nodes = it_cur->children();
+       io::xml::range nodes = it_cur->children();
        assert(nodes.size() == 2);
        auto it_node = nodes.begin();
        cases.push_back({*init->GetExpression(*it_node++, base_path),
@@ -1214,7 +1217,7 @@ const Initializer::ExtractorMap Initializer::kExpressionExtractors_ = {
    {"ite", &Extract<Ite>},
    {"switch", &Extract<Switch>}};
 
-Expression* Initializer::GetExpression(const io::xml::Element& expr_element,
+Expression* Initializer::GetExpression(const io::xml::element& expr_element,
                                       const std::string& base_path) {
    std::string_view expr_type = expr_element.name();
    auto register_expression = [this](std::unique_ptr<Expression> expression) {
@@ -1262,7 +1265,7 @@ Expression* Initializer::GetExpression(const io::xml::Element& expr_element,
        }();
 
        std::vector<Expression*> expr_args;
-       for (const io::xml::Element& node : expr_element.children())
+       for (const io::xml::element& node : expr_element.children())
            expr_args.push_back(GetExpression(node, base_path));
 
        try {
@@ -1289,7 +1292,7 @@ Expression* Initializer::GetExpression(const io::xml::Element& expr_element,
 }
 
 Expression* Initializer::GetParameter(const std::string_view& expr_type,
-                                     const io::xml::Element& expr_element,
+                                     const io::xml::element& expr_element,
                                      const std::string& base_path) {
    auto check_units = [&expr_element](const auto& parameter) {
        std::string_view unit = expr_element.attribute("unit");
@@ -1321,9 +1324,9 @@ Expression* Initializer::GetParameter(const std::string_view& expr_type,
    return nullptr;  // The expression is not a parameter.
 }
 
-void Initializer::ProcessCcfMembers(const io::xml::Element& members_node,
+void Initializer::ProcessCcfMembers(const io::xml::element& members_node,
                                    CcfGroup* ccf_group) {
-   for (const io::xml::Element& event_node : members_node.children()) {
+   for (const io::xml::element& event_node : members_node.children()) {
        assert("basic-event" == event_node.name());
        auto basic_event =
            std::make_unique<BasicEvent>(std::string(event_node.attribute("name")),
@@ -1338,7 +1341,7 @@ void Initializer::ProcessCcfMembers(const io::xml::Element& members_node,
    }
 }
 
-void Initializer::DefineCcfFactor(const io::xml::Element& factor_node,
+void Initializer::DefineCcfFactor(const io::xml::element& factor_node,
                                  CcfGroup* ccf_group) {
    Expression* expression =
        GetExpression(*factor_node.child(), ccf_group->base_path());
@@ -1440,7 +1443,7 @@ Formula::ArgEvent Initializer::GetEvent(std::string_view entity_reference,
 
 #undef GET_EVENT
 
-void Initializer::DefineExternLibraries(const io::xml::Element& xml_node) {
+void Initializer::DefineExternLibraries(const io::xml::element& xml_node) {
    auto optional_bool = [&xml_node](const char* tag) {
        std::optional<bool> attribute = xml_node.attribute<bool>(tag);
        return attribute && *attribute;
@@ -1487,7 +1490,7 @@ const int kNumInterfaces = 126;  ///< All possible interfaces.
 template <class SinglePassRange>
 int Encode(const SinglePassRange& args) noexcept {
    assert(!args.empty());
-   auto to_digit = [](const io::xml::Element& node) -> int {
+   auto to_digit = [](const io::xml::element& node) -> int {
        std::string_view name = node.name();
        return static_cast<int>([&name] {
            if (name == "int")
@@ -1499,7 +1502,7 @@ int Encode(const SinglePassRange& args) noexcept {
 
    int ret = 0;
    int base_power = 1;  // Base ^ (pos - 1).
-   for (const io::xml::Element& node : args) {
+   for (const io::xml::element& node : args) {
        ret += base_power * to_digit(node);
        base_power *= kExternTypeBase;
    }
@@ -1556,7 +1559,7 @@ void GenerateExternFunctionExtractor(ExternFunctionExtractorMap* function_map) {
 
 }  // namespace
 
-void Initializer::DefineExternFunction(const io::xml::Element& xml_element) {
+void Initializer::DefineExternFunction(const io::xml::element& xml_element) {
    static const ExternFunctionExtractorMap function_extractors = [] {
        ExternFunctionExtractorMap function_map;
        function_map.reserve(kNumInterfaces);
@@ -1863,7 +1866,7 @@ void Initializer::ValidateExpressions() {
    cycle::CheckCycle<Parameter>(model_->table<Parameter>(), "parameter");
 
    // Validate expressions.
-   for (const std::pair<Expression*, io::xml::Element>& expression : expressions_) {
+   for (const std::pair<Expression*, io::xml::element>& expression : expressions_) {
        try {
            expression.first->Validate();
        } catch (ValidityError& err) {

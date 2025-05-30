@@ -24,9 +24,9 @@
 namespace mef::openpsa {
 
 /// This class represents a risk analysis model.
-class Model
+class model
    : public Element,
-     public MultiContainer<Model, InitiatingEvent, EventTree, Sequence, Rule,
+     public MultiContainer<model, InitiatingEvent, EventTree, Sequence, Rule,
                            Alignment, Substitution, FaultTree, BasicEvent,
                            Gate, HouseEvent, Parameter, CcfGroup,
                            ExternLibrary, ExternFunction<void>> {
@@ -45,7 +45,7 @@ class Model
    /// @param[in] name  The optional name for the model.
    ///
    /// @throws ValidityError  The name is malformed.
-   explicit Model(std::string name = "") : Element(name.empty() ? kDefaultName : std::move(name)),
+   explicit model(std::string name = "") : Element(name.empty() ? kDefaultName : std::move(name)),
                                            mission_time_(std::make_unique<MissionTime>()) {}
 
    /// @returns true if the model name has not been set.
@@ -136,7 +136,7 @@ class Model
    }
 
  private:
-   /// @copydoc Model::Add(std::unique_ptr<BasicEvent>).
+   /// @copydoc model::Add(std::unique_ptr<BasicEvent>).
    template <class T>
    void AddEvent(std::unique_ptr<T> element) {
        CheckDuplicateEvent(*element);

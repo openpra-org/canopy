@@ -9,7 +9,7 @@
 #include "io/xml/error.h"
 #include <format>
 
-namespace canopy::io::xml {
+namespace io::xml {
 
 /**
  * @brief Converts an error_type to a human-readable string keyword.
