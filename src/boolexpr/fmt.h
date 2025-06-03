@@ -1,155 +1,62 @@
 #ifndef BOOLEXPR_FMT_H
 #define BOOLEXPR_FMT_H
 
-#include "./operator.h"
+#include <fmt/base.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
-namespace std {
+#include "boolexpr/node.h"
 
-template <>
-struct formatter<canopy::boolexpr::UnaryOperatorType> {
-    enum class Format {
-        Regular,
-        Pretty,
-    };
+namespace canopy::boolexpr {
 
-    Format fmt{Format::Regular};
-
-    constexpr auto parse(const std::format_parse_context &ctx) {
-        auto it = ctx.begin();
-        const auto end = ctx.end();
-
-        if (it != end && *it != '}') { // If there is a specifier
-            if (*it == 'r') {
-                fmt = Format::Regular;
-            } else if (*it == 'P') {
-                fmt = Format::Pretty;
-            } else {
-                throw std::format_error("invalid presentation for UnaryOperatorType: expected 'r' or 'P'");
-            }
-            it++;
-        }
-        // Check if consumed all or next is '}'
-        if (it != end && *it != '}') {
-            throw std::format_error(
-                "invalid format string for UnaryOperatorType: unexpected characters after specifier");
-        }
-        return it;
+template <Hashable NameType>
+struct FormattingVisitor {
+    std::string operator()(const Constant& node) const {
+        return fmt::format("{}", node.value);
     }
 
-    template <typename FormatContext> auto format(const canopy::boolexpr::UnaryOperatorType op, FormatContext &ctx) const {
-        std::string_view name = "unknown_unary_op";
-        switch (op) {
-        case canopy::boolexpr::UnaryOperatorType::NOT:
-            name = (fmt == Format::Regular ? "NOT" : "!");
-            break;
+    std::string operator()(const Variable<NameType>& node) const {
+        return node.name;
+    }
+
+    std::string operator()(const Not<NameType>& node) const {
+        return fmt::format("NOT({})", node.operand->visit(*this));
+    }
+
+    template<typename NaryNodeType>
+    std::string format_nary(const NaryNodeType& node, std::string_view op_symbol) const {
+        if (node.operands.empty()) {
+            return fmt::format("{}", NaryNodeType::identity);
         }
-        return std::format_to(ctx.out(), "{}", name);
+
+        std::vector<std::string> op_strings(node.operands.size());
+        std::transform(
+            node.operands.cbegin(),
+            node.operands.cend(),
+            op_strings.begin(),
+            [&](const ExprPtr<NameType>& expr) {
+                return expr->visit(*this);
+            }
+        );
+
+        return fmt::format("{}({})", op_symbol, fmt::join(op_strings, ", "));
+    }
+
+    std::string operator()(const And<NameType>& node) const {
+        return format_nary(node, "AND");
+    }
+
+    std::string operator()(const Or<NameType>& node) const {
+        return format_nary(node, "OR");
     }
 };
 
 
-template <>
-struct formatter<canopy::boolexpr::BinaryOperatorType> {
-    enum class Format {
-        Regular,
-        Pretty,
-    };
-
-    Format fmt{Format::Regular};
-
-    constexpr auto parse(const std::format_parse_context& ctx) {
-        auto it = ctx.begin();
-        const auto end = ctx.end();
-
-        if (it != end && *it != '}') { // If there is a specifier
-            if (*it == 'r') {
-                fmt = Format::Regular;
-            } else if (*it == 'P') {
-                fmt = Format::Pretty;
-            } else {
-                throw std::format_error("invalid presentation for BinaryOperatorType: expected 'r' or 'P'");
-            }
-            it++;
-        }
-        // Check if consumed all or next is '}'
-        if (it != end && *it != '}') {
-            throw std::format_error(
-                "invalid format string for Binary: unexpected characters after specifier");
-        }
-        return it;
-    }
-
-    template <typename FormatContext>
-    auto format(const canopy::boolexpr::BinaryOperatorType op, FormatContext& ctx) const {
-        std::string_view name = "unknown_binary_op";
-        switch (op) {
-            case canopy::boolexpr::BinaryOperatorType::AND:
-                name = (fmt == Format::Regular ? "AND" : "&&");
-                break;
-            case canopy::boolexpr::BinaryOperatorType::OR:
-                name = (fmt == Format::Regular  ? "OR" : "||");
-                break;
-            case canopy::boolexpr::BinaryOperatorType::XOR: // "XOR" for both as per request
-                name = "XOR";
-                break;
-            case canopy::boolexpr::BinaryOperatorType::IMPLIES:
-                name = (fmt == Format::Regular ? "IMPLIES" : "=>");
-                break;
-        case canopy::boolexpr::BinaryOperatorType::IFF:
-                name = (fmt == Format::Regular ? "IFF" : "<=>");
-                break;
-        }
-        return std::format_to(ctx.out(), "{}", name);
-    }
-};
-
-
-template <>
-struct std::formatter<canopy::boolexpr::TernaryOperatorType> {
-    enum class Format {
-        Regular,
-        Pretty,
-    };
-
-    Format fmt{Format::Regular};
-
-
-    constexpr auto parse(const std::format_parse_context& ctx) {
-        auto it = ctx.begin();
-        const auto end = ctx.end();
-
-        if (it != end && *it != '}') { // If there is a specifier
-            if (*it == 'r') {
-                fmt = Format::Regular;
-            } else if (*it == 'P') {
-                fmt = Format::Pretty;
-            } else {
-                throw std::format_error("invalid presentation for BinaryOperatorType: expected 'r' or 'P'");
-            }
-            it++;
-        }
-        // Check if consumed all or next is '}'
-        if (it != end && *it != '}') {
-            throw std::format_error(
-                "invalid format string for Binary: unexpected characters after specifier");
-        }
-        return it;
-
-    }
-
-    template <typename FormatContext>
-    auto format(const canopy::boolexpr::TernaryOperatorType op, FormatContext& ctx) const {
-        std::string_view name = "unknown_ternary_op";
-        switch (op) {
-            case canopy::boolexpr::TernaryOperatorType::IF_THEN_ELSE:
-                // As per thought process, "IF_THEN_ELSE" for both 'r' and 'P'
-                // as "ITE" isn't a standard symbol.
-                name = "IF_THEN_ELSE";
-                break;
-        }
-        return std::format_to(ctx.out(), "{}", name);
-    }
-};
+template <Hashable NameType>
+auto format_as(const BooleanExpression<NameType>& boolexpr) {
+    FormattingVisitor<NameType> visitor{};
+    return boolexpr.visit(visitor);
+}
 
 }
 
