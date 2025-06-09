@@ -91,24 +91,28 @@ TEST_CASE("Boolean Expression", "[BooleanExpression]") {
 
     BooleanExpression manager{};
 
-    fmt::print("{}\n", manager.to_string(manager.True()));
-    fmt::print("{}\n", manager.to_string(manager.False()));
+    // fmt::print("{}\n", manager.to_string(manager.True()));
+    // fmt::print("{}\n", manager.to_string(manager.False()));
 
-    const auto p = manager.variable("P").value();
-    const auto q = manager.variable("Q").value();
-    const auto r = manager.variable("R").value();
-    fmt::println("P: {}, Q: {}, R: {}\n", p, q, r);
+    const auto p = manager.variable("P");
+    const auto q = manager.variable("Q");
+    const auto r = manager.variable("R");
+    REQUIRE(p != q);
+    REQUIRE(p != r);
+    REQUIRE(r != q);
 
+    const auto p_children = manager.get_children(*p);
+    REQUIRE(p_children.size() == 0);
 
-    const auto expr1 = manager.conjunct({p, q}).value();
-    fmt::println("{}: {}", expr1, manager.to_string(expr1));
-    fmt::println("{}\n", manager.children.to_string());
+    const auto p_repeat = manager.variable("P");
+    REQUIRE(p_repeat == p);
 
-    const auto expr2 = manager.disjunct({expr1, r}).value();
-    fmt::println("{}: {}", expr2, manager.to_string(expr2));
-    fmt::println("{}\n", manager.children.to_string());
+    const auto expr1 = manager.conjunct({*p, *q});
+    fmt::println("{}: {}", *expr1, manager.to_string(*expr1));
 
-    const auto expr3 = manager.negate(expr2).value();
-    fmt::println("{}: {}", expr2, manager.to_string(expr3));
-    fmt::println("{}\n", manager.children.to_string());
+    const auto expr2 = manager.disjunct({*expr1, *r});
+    fmt::println("{}: {}", *expr2, manager.to_string(*expr2));
+
+    const auto expr3 = manager.negate(expr2);
+    fmt::println("{}: {}", *expr3, manager.to_string(*expr3));
 }

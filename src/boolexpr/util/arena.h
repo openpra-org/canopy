@@ -93,6 +93,20 @@ template <class T, UnsignedInteger IndexType = std::size_t> class ObjectArena {
         return nullptr;
     }
 
+    T* operator[](const idx_type idx) {
+        if (idx >= storage_.size()) {
+            return nullptr;
+        }
+        return &storage_.at(idx);
+    }
+
+    const T* operator[](const idx_type idx) const {
+        if (idx >= storage_.size()) {
+            return nullptr;
+        }
+        return &storage_.at(idx);
+    }
+
     constexpr bool occupied(const idx_type idx) const {
         return idx < storage_.size() && occupied_.at(idx);
     }
@@ -152,7 +166,7 @@ template <class T, UnsignedInteger IndexType = std::size_t> class SetArena {
             std::back_inserter(storage_)
         );
 
-        const auto new_idx{indptr_.size() - 1U};
+        const auto new_idx{indptr_.size() - index_type{1}};
         indptr_.emplace_back(storage_.size());
 
         return new_idx;
@@ -164,7 +178,7 @@ template <class T, UnsignedInteger IndexType = std::size_t> class SetArena {
         }
 
         const auto start = storage_.cbegin();
-        return {start + indptr_.at(idx), start + indptr_.at(idx + 1U),};
+        return {start + indptr_.at(idx), start + indptr_.at(idx + index_type{1}),};
     }
 
     [[nodiscard]]

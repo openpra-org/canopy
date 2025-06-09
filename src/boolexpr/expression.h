@@ -14,7 +14,8 @@
 
 namespace canopy::boolexpr {
 
-template <util::UnsignedInteger NodeID = std::uint16_t, util::UnsignedInteger VarID = std::uint16_t,
+template <util::UnsignedInteger NodeID = std::uint16_t,
+          util::UnsignedInteger VarID = std::uint16_t,
           util::UnsignedInteger NumChildrenType = std::uint16_t>
 class BooleanExpression {
   public:
@@ -22,21 +23,12 @@ class BooleanExpression {
         std::size_t node_capacity{10000};
         std::size_t num_children{1000};
         bool reserve{true};
+
+        typename node::NodeHasher<NodeID>::Config hasher_config{};
     };
 
-    struct Node {
-        node::NodeType type{};
-        NodeID data{};
-
-        friend constexpr bool operator==(const Node &lhs, const Node &rhs) {
-            return lhs.type == rhs.type && lhs.data == rhs.data;
-        }
-
-        friend constexpr bool operator!=(const Node &lhs, const Node &rhs) {
-            return lhs.type != rhs.type || lhs.data != rhs.data;
-        }
-    };
-
+    using NodeData = NodeID;
+    using Node = node::Node<NodeData>;
     using NodeStorage = util::ObjectArena<Node, NodeID>;
     using ChildrenReg = util::SetArena<NodeID, NumChildrenType>;
     using VariableReg = util::NameIndexer<VarID>;
@@ -45,32 +37,76 @@ class BooleanExpression {
 
     explicit BooleanExpression(const Config &config)
         : nodes{config.node_capacity, config.reserve},
-          children{config.node_capacity, config.num_children * config.node_capacity, config.reserve} {
-        FALSE_IDX = nodes.create(node::NodeType::Constant, false).value();
-        TRUE_IDX = nodes.create(node::NodeType::Constant, true).value();
-    }
+          children{config.node_capacity, config.num_children * config.node_capacity, config.reserve},
+          node_hasher{config.hasher_config}
+    {}
 
-    NodeID constant(const bool value) const { return value ? TRUE_IDX : FALSE_IDX; }
+    auto constant(const bool value){
+        return find_or_insert_unary<node::NodeType::Constant>(value);
+    }
 
     auto variable(std::string_view name) {
         const auto var_id = variables.find_or_insert(name);
-
-        // TODO: include of NodeID by var_id
-        return nodes.create(node::NodeType::Variable, var_id);
+        return find_or_insert_unary<node::NodeType::Variable>(var_id);
     }
 
-    auto negate(const NodeID operand) { return nodes.create(node::NodeType::NOT, operand); }
+    std::optional<NodeID> negate(const NodeID operand) {
+        if (not exists(operand)) {
+            return std::nullopt;
+        }
+        return find_or_insert_unary<node::NodeType::NOT>(operand);
+    }
+
+    auto negate(const std::optional<NodeID> &operand) {
+        return operand.and_then(
+            [&](const NodeID id) {
+                return negate(id);
+            }
+        );
+    }
 
     auto conjunct(std::vector<NodeID>&& operands) {
-        return apply_nary(node::NodeType::AND, std::move(operands));
+        return find_or_insert_nary<node::NodeType::AND>(std::move(operands));
     }
 
-    // auto conjunct(std::vector<NodeID> nodes) {
-    //     return apply_nary(node::NodeType::AND, std::move(nodes));
-    // }
-
     auto disjunct(std::vector<NodeID>&& operands) {
-        return apply_nary(node::NodeType::OR, std::move(operands));
+        return find_or_insert_nary<node::NodeType::OR>(std::move(operands));
+    }
+
+    auto exists(const NodeID node) const {
+        return nodes.occupied(node);
+    }
+
+    auto get_children(const NodeID node) const {
+        const auto node_ptr = nodes.at(node);
+        if (node_ptr == nullptr) {
+            return std::span<const NodeID>{};
+        }
+
+        switch (node_ptr->type) {
+            case node::NodeType::Constant:
+            case node::NodeType::Variable: {
+                return std::span<const NodeID>{};
+            }
+            case node::NodeType::NOT: {
+                return std::span<const NodeID>(&(node_ptr->data), 1);
+            }
+            case node::NodeType::OR:
+            case node::NodeType::AND: {
+                return children.get(node_ptr->data);
+            }
+            default: {
+                std::unreachable();
+            }
+        }
+    }
+
+    node::NodeType get_type(const NodeID node) const {
+        const auto node_ptr = nodes.at(node);
+        if (node_ptr == nullptr) {
+            std::unreachable();
+        }
+        return node_ptr->type;
     }
 
     std::string to_string(const NodeID node) const {
@@ -93,9 +129,8 @@ class BooleanExpression {
             return node_ptr->data ? "TRUE" : "FALSE";
         }
         case node::NodeType::Variable: {
-            const auto name = variables.get(node_ptr->data);
-            if (name.has_value()) {
-                return fmt::format("{}", *name);
+            if (const auto name = variables.at(node_ptr->data); name.has_value()) {
+                return fmt::format("{}", name.value());
             }
             return "";
         }
@@ -114,29 +149,74 @@ class BooleanExpression {
         }
     }
 
-    constexpr NodeID True() const { return TRUE_IDX; }
-    constexpr NodeID False() const { return FALSE_IDX; }
-
   private:
     VariableReg variables{};
     NodeStorage nodes{};
     ChildrenReg children{};
 
-    NodeID FALSE_IDX{0};
-    NodeID TRUE_IDX{1};
+    node::NodeHasher<NodeID> node_hasher{};
+    std::unordered_map<std::size_t, NodeID> unique_nodes{};
 
-    auto apply_nary(node::NodeType op, std::vector<NodeID>&& operands) {
+    template<node::NodeType node_type>
+    [[nodiscard]]
+    std::optional<NodeID> find_or_insert_unary(const NodeData data) {
+        const auto node_hash = node_hasher.template unary<node_type>(data);
+
+        if (const auto node_id = find_node_by_hash(node_hash); node_id.has_value()) {
+            return node_id;
+        }
+
+        const auto node_id = nodes.create(node_type, data);
+
+        if (node_id.has_value()) {
+            add_node_by_hash(node_hash, node_id.value());
+        }
+        return node_id;
+    }
+
+    std::optional<NodeID> find_node_by_hash(const std::size_t hash) const {
+        auto it = unique_nodes.find(hash);
+        if (it != unique_nodes.end()) {
+            return it->second;
+        }
+        return std::nullopt;
+    }
+
+    void add_node_by_hash(const std::size_t hash, NodeID idx) {
+        unique_nodes.emplace(hash, idx);
+    }
+
+    template<node::NodeType node_type>
+    std::optional<NodeID> find_or_insert_nary(std::vector<NodeID>&& operands) {
         // TODO: figure out better input format
 
         std::sort(std::begin(operands), std::end(operands));
 
         // TODO: remove duplicates
 
-        return children.store(operands).and_then(
+        if (std::any_of(operands.cbegin(), operands.cend(),
+            [&](const NodeID id) {
+                return not exists(id);
+            }))
+        {
+            return std::nullopt;
+        }
+
+        const auto node_hash = node_hasher.template nary<node_type>(operands);
+        if (const auto node_id = find_node_by_hash(node_hash); node_id.has_value()) {
+            return node_id;
+        }
+
+        const auto node_id = children.store(operands).and_then(
             [&](const auto id) {
-                return nodes.create(op, id);
+                return nodes.create(node_type, id);
             }
         );
+
+        if (node_id.has_value()) {
+            add_node_by_hash(node_hash, node_id.value());
+        }
+        return node_id;
     }
 };
 

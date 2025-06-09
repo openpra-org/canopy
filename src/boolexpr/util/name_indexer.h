@@ -29,11 +29,15 @@ template <UnsignedInteger ID> class NameIndexer {
         return insert(name);
     }
 
-    std::optional<std::string_view> get(ID id) const {
+    std::optional<std::string_view> at(ID id) const {
         if (id >= name_to_id_.size()) {
             return std::nullopt;
         }
 
+        return id_to_name_.at(id);
+    }
+
+    std::string_view operator[](ID id) const {
         return id_to_name_.at(id);
     }
 
